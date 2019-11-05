@@ -9,6 +9,9 @@ pipeline {
                     openshift.withCluster() {
                         openshift.withProject() {
                             echo "Using project: ${openshift.project()}"
+                            
+                            def builds = openshift.selector("bc", "indy-perf-tester").related('builds')
+                            echo "Got ${builds}"
                         }
                     }
                 }
@@ -23,12 +26,12 @@ pipeline {
                 script {
                     def jsonObj = readJSON text: env.IMG_BUILD_HOOKS
                     if (env.GIT_URL in jsonObj) {
-                        echo "Build docker image"
                         if (env.BRANCH_NAME in jsonObj[env.GIT_URL]) {
                             img_build_hook = jsonObj[env.GIT_URL][env.BRANCH_NAME]
                         } else {
                             img_build_hook = jsonObj[env.GIT_URL]['default']
                         }
+                        echo "Build docker image: ${img_build_hook}"
                     }
                 }
             }
