@@ -28,6 +28,8 @@ pipeline {
                         def bc = openshift.selector("bc", "indy-perf-tester")
                         def buildSel = bc.startBuild()
                         buildSel.logs("-f")
+                    }
+                }
             }
         }
     }
