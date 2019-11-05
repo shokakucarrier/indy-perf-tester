@@ -2,6 +2,17 @@ def img_build_hook = null
 
 pipeline {
     stages {
+        stage('preamble') {
+            steps {
+                script {
+                    openshift.withCluster() {
+                        openshift.withProject() {
+                            echo "Using project: ${openshift.project()}"
+                        }
+                    }
+                }
+            }
+        }
         stage('Check Image Build Hook') {
             when {
                 expression { env.IMG_BUILD_HOOKS != null }
@@ -21,24 +32,19 @@ pipeline {
                 }
             }
         }
-        stage('Build & Push Image') {
-            when {
-                allOf {
-                    expression { img_build_hook != null }
-                    expression { env.CHANGE_ID == null } // Not pull request
-                }
-            }
-            steps {
-                script {
-                    echo "Build docker image"
-                    sh """cat <<EOF > payload_file.yaml
-env:
-   - name: "tarball_url"
-     value: "${tarball_url}"
-EOF"""
-                    sh "curl -i -H 'Content-Type: application/yaml' --data-binary @payload_file.yaml -k -X POST ${img_build_hook}"
-                }
-            }
-        }
+        // stage('Build & Push Image') {
+        //     when {
+        //         allOf {
+        //             expression { img_build_hook != null }
+        //             expression { env.CHANGE_ID == null } // Not pull request
+        //         }
+        //     }
+        //     steps {
+        //         script {
+        //             echo "Build docker image"
+        //             sh "curl -i -H 'Content-Type: application/yaml' --data-binary @payload_file.yaml -k -X POST ${img_build_hook}"
+        //         }
+        //     }
+        // }
     }
 }
