@@ -11,7 +11,7 @@ pipeline {
                             echo "Using project: ${openshift.project()}"
                             
                             def builds = openshift.selector("bc", "indy-perf-tester").related('builds')
-                            builds.each{
+                            builds.untilEach(1){
                                 echo "Got build: ${it}"
                             }
                         }
