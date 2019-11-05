@@ -392,4 +392,9 @@ def cleanup_build_group(params):
 
 
 if __name__ == "__main__":
-    run_build()
+    try:
+        run_build()
+    finally:
+        print("Finished. Sleeping...")
+        while True:
+            time.sleep(1)
