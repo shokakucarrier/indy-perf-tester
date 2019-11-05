@@ -1,6 +1,7 @@
 def img_build_hook = null
 
 pipeline {
+    agent { label 'python' }
     stages {
         stage('preamble') {
             steps {
