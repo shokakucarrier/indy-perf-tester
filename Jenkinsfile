@@ -10,7 +10,8 @@ pipeline {
             steps {
                 echo "Load OCP Mapping document"
                 script {
-                    if (fileExists ocp_map){
+                    def exists = fileExists ocp_map
+                    if (exists){
                         def jsonObj = readJSON file: ocp_map
                         if (bc_section in jsonObj){
                             if (env.GIT_URL in jsonObj[bc_section]) {
