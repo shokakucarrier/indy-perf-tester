@@ -28,11 +28,17 @@ pipeline {
             }
         }
         stage('Build Image') {
+            when {
+                allOf {
+                    expression { my_bc != null }
+                    expression { env.CHANGE_ID == null } // Not pull request
+                }
+            }
             steps {
                 script {
                     openshift.withCluster() {
                         openshift.withProject() {
-                            echo "Starting image build for indy-perf-tester in project: ${openshift.project()}"
+                            echo "Starting image build: ${openshift.project()}:${my_bc}"
                             def bc = openshift.selector("bc", my_bc)
                             def buildSel = bc.startBuild()
                             buildSel.logs("-f")
