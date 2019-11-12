@@ -7,6 +7,11 @@ pipeline {
     agent { label 'python' }
     stages {
         stage('Load OCP Mappings') {
+            when {
+                allOf {
+                    expression { env.CHANGE_ID == null } // Not pull request
+                }
+            }
             steps {
                 echo "Load OCP Mapping document"
                 script {
