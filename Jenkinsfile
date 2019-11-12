@@ -35,6 +35,10 @@ pipeline {
                     else {
                         echo "JSON configuration file not found: ${ocp_map}"
                     }
+
+                    if ( my_bc == null ) {
+                        error("No valid BuildConfig reference found for Git URL: ${env.GIT_URL} with branch: ${env.BRANCH_NAME}")
+                    }
                 }
             }
         }
