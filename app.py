@@ -276,6 +276,7 @@ def create_missing_stores(stores, params):
         'disabled': False, 
         'doctype': 'hosted', 
         'name': params['id'], 
+        'allow_snapshot': True,
         'allow_releases': True
     })
 
