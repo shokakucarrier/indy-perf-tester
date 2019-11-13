@@ -11,20 +11,23 @@ from datetime import datetime as dt
 # from urlparse import urlparse
 from urllib.parse import urlparse
 
-ENVAR_TEST_CONFIG = 'test_configfile'
-ENVAR_BUILD_NAME = 'build_name'
-ENVAR_INDY_URL = 'indy_url'
-ENVAR_PROXY_PORT = 'proxy_port'
+ENVAR_SUITE_YML = 'SUITE_YML'
+ENVAR_BUILDERS = 'BUILDERS'
+ENVAR_INDY_URL = 'INDY_URL'
+ENVAR_PROXY_PORT = 'PROXY_PORT'
 
+SUITE_CATALOG_DIR = os.environ.get('SUITE_CATALOG_DIR') or '/suites'
 
 TEST_BUILDS_SECTION = 'builds'
-TEST_SOURCE_BASEDIR = 'source-base-directory'
 TEST_PROMOTE_BY_PATH_FLAG = 'promote-by-path'
 TEST_STORES = 'stores'
 
-
-BUILD_SOURCE_DIR = 'source-directory'
+BUILD_MVN_ARGS = 'mvn-args'
+BUILD_PME_ARGS = 'pme-args'
+BUILD_GIT_URL = 'git-url'
 BUILD_GIT_BRANCH = 'git-branch'
+BUILD_GIT_CONTEXT_DIR = 'git-context-dir'
+BUILD_TIMES = 'times'
 
 
 DEFAULT_STORES = [
@@ -34,9 +37,9 @@ DEFAULT_STORES = [
         'allow_releases': True
     },
     {
-          'type': 'hosted', 
-          'name': 'shared-imports', 
-          'allow_releases': True
+        'type': 'hosted', 
+        'name': 'shared-imports', 
+        'allow_releases': True
     },
     {
         'type': 'group', 
@@ -46,8 +49,8 @@ DEFAULT_STORES = [
         ]
     },
     {
-          'type': 'group', 
-          'name': 'brew_proxies'
+        'type': 'group', 
+        'name': 'brew_proxies'
     }
 ]
 
@@ -125,26 +128,129 @@ POST_HEADERS = {'content-type': 'application/json', 'accept': 'application/json'
 
 def run_build():
     """ 
-    Main entry point. Read envars, setup build dir, checkout sources, and execute the build.
+    Main entry point. Read envars, calculate the ordered build list for this builder, and execute each build in the ordered list.
 
-    Build steps include:
-    
-        * Setup all relevant repositories and groups in Indy
-        * Checkout project source code
-        * Execute PME against DA URL (TODO)
-        * Setup a Maven settings.xml for the build
-        * Execute Maven with the given settings.xml
-        * Pull the resulting tracking record
-        * Promote dependencies
-        * Promote build output
-        * Cleanup relevant repos / groups from Indy
-
-    NOTE: This process should mimic the calls and sequence executed by PNC as closely as possible!
+    NOTE: Builds that match this builder's index will be run in an interleaved method, where a build that is to run 5 times does
+    not run that single build all 5 times before proceeding to the next matching build. Instead, each matching build will be run,
+    then the build array will be processed again with a pass counter to see what matching builds have a build-count that exceeds
+    the current pass counter. This will proceed until the pass counter exceeds the build-count for all matching builds.
     """
 
     # try:
-    (test_config, build_name, indy_url, proxy_port) = read_test_config()
-    (build, src_basedir, promote_by_path, stores) = validate_and_extract_build(test_config, build_name)
+    (suite_config, builders, builder_idx, indy_url, proxy_port) = read_env()
+
+    promote_by_path = suite_config.get(TEST_PROMOTE_BY_PATH_FLAG) or True
+    stores = suite_config.get(TEST_STORES) or DEFAULT_STORES
+    builds = suite_config.get(TEST_BUILDS_SECTION) or {}
+
+    ordered_builds = create_build_order(builds, builders, builder_idx)
+
+    for build_name in ordered_builds:
+        run_build(build_name, builds, promote_by_path, stores, indy_url, proxy_port)
+
+def read_env():
+    """ Read the suite configuration that this worker should run, from envars. 
+
+    Once we have a suite YAML file (from the SUITE_YML envar), that file will be parsed
+    and passed back with the rest of the envar values.
+
+    If any required envars are missing and don't have default values, error messages will
+    be generated. If the list of errors is non-empty at the end of this method, an error
+    message containing all of the problems will be logged to the console.
+    """
+
+    suite_yml = os.environ.get(ENVAR_SUITE_YML)
+    indy_url = os.environ.get(ENVAR_INDY_URL)
+    proxy_port = os.environ.get(ENVAR_PROXY_PORT) or '8081'
+    builders = os.environ.get(ENVAR_BUILDERS)
+    nodename = os.environ.get(ENVAR_NODENAME)
+
+    errors = []
+    if indy_url is None:
+        errors.append(f"Missing Indy URL envar: {ENVAR_INDY_URL}")
+
+    if builders is None:
+        errors.append(f"Missing builder count envar: {ENVAR_BUILDERS}")
+
+    if suite_yml is None:
+        errors.append(f"Missing test suite configfile envar: {ENVAR_SUITE_YML}")
+    elif os.path.exists(os.path.join( SUITE_CATALOG_DIR, suite_yml )):
+        suite_file = os.path.join( SUITE_CATALOG_DIR, suite_yml )
+        with open( suite_file ) as f:
+            yaml = YAML(typ='safe')
+            suite_config = yaml.load(f)
+    else:
+        errors.append( f"Missing suite config file: {os.path.join(SUITE_CATALOG_DIR, suite_yml)}")
+
+    if nodename is None:
+        errors.append(f"Missing nodename envar: {ENVAR_NODENAME}")
+    else:
+        builder_idx = int(nodename.split('-')[-1])
+
+    if len(errors) > 0:
+        print("\n".join(errors))
+        raise Exception("Invalid configuration")
+
+    return (suite_config, builders, builder_idx, indy_url, proxy_port)
+
+
+def create_build_order(builds, builders, builder_idx):
+    """ Iterate through the builds in this suite configuration, finding all builds that match the current builder index.
+
+    Builds are matched using a synthetic array index (the order given in the build map will be used to generate a synthetic array index here).
+
+    Matching builds will satisfy (synthetic_index % builder-count == builder-index).
+
+    Once a build matches, its name is added to a list of includes, and if its build-count number exceeds the maximum seen, it will be used as
+    the maximum-build-passes number.
+
+    Then, the include list will be processed once for each pass in the build-passes number. If the pass-index is less than included build's 
+    build-count (defaulting to 1), then the build's name is included (again) in the ordered-builds array. This will build up an interleaved
+    build script to be executed here.
+    """
+    included_builds = []
+
+    counter=0
+    passes = 0
+    for name,build in builds.items():
+        if counter % builders == builder_idx:
+            included_builds.append(name)
+            build_passes = build.get(BUILD_TIMES) or 1
+            if build_passes > passes:
+                passes = build_passes
+
+    ordered_builds = []
+    for passidx in range(passes):
+        for name in included_builds:
+            build = builds[name]
+            build_passes = build.get(BUILD_TIMES) or 1
+            if passidx < build_passes:
+                ordered_builds.append(name)
+
+    print(f"My build order:\n{"\n- ".join(ordered_builds)}")
+
+    return ordered_builds
+
+
+def run_build(build_name, builds, promote_by_path, stores, indy_url, proxy_port):
+    """ Execute the named build.
+
+        Build steps include:
+        
+            * Setup all relevant repositories and groups in Indy
+            * Checkout project source code
+            * Execute PME against DA URL (TODO)
+            * Setup a Maven settings.xml for the build
+            * Execute Maven with the given settings.xml
+            * Pull the resulting tracking record
+            * Promote dependencies
+            * Promote build output
+            * Cleanup relevant repos / groups from Indy
+
+        NOTE: This process should mimic the calls and sequence executed by PNC as closely as possible!
+    """
+    print(f"Running build: {build_name}")
+    return
 
     tid_base = f"build_{build_name}"
 
@@ -182,53 +288,6 @@ def run_build():
 
     # except (KeyboardInterrupt,SystemExit,Exception) as e:
     #     print(e)
-
-def read_test_config():
-    """ Read the test configuration that this worker should run, from envars. """
-
-    test_configfile = os.environ.get(ENVAR_TEST_CONFIG)
-    indy_url = os.environ.get(ENVAR_INDY_URL)
-    proxy_port = os.environ.get(ENVAR_PROXY_PORT) or '8081'
-    build_name = os.environ.get(ENVAR_BUILD_NAME)
-
-    errors = []
-    if indy_url is None:
-        errors.append(f"Missing Indy URL envar: {ENVAR_INDY_URL}")
-
-    if build_name is None:
-        errors.append(f"Missing build name envar: {ENVAR_BUILD_NAME}")
-
-    if test_configfile is None:
-        errors.append(f"Missing test config-file envar: {ENVAR_TEST_CONFIG}")
-    elif os.path.exists(test_configfile):
-        with open( test_configfile ) as f:
-            yaml = YAML(typ='safe')
-            test_config = yaml.load(f)
-    else:
-        errors.append( f"Missing test config file {test_configfile}")
-
-    if len(errors) > 0:
-        print("\n".join(errors))
-        raise Exception("Invalid configuration")
-
-    return (test_config, build_name, indy_url, proxy_port)
-
-def validate_and_extract_build(test_config, build_name):
-    """ Retrieve the configuration for this current build from a larger test-suite profile config, and validate that
-        all necessary parameters are available. Also, pull the Indy URL from the test-suite config.
-    """
-
-    builds = test_config.get(TEST_BUILDS_SECTION) or {}
-    build = builds.get(build_name)
-    src_basedir = test_config.get(TEST_SOURCE_BASEDIR) or os.getcwd()
-    promote_by_path = test_config.get(TEST_PROMOTE_BY_PATH_FLAG) or True
-    base_stores = test_config.get(TEST_STORES) or DEFAULT_STORES
-
-    if build is None:
-        print(f"Test configuration is invalid. Missing build config for {build_name}")
-        raise Exception("Invalid configuration")
-
-    return (build, src_basedir, promote_by_path, base_stores)
 
 
 def setup_builddir(builds_dir, projectdir, branch, tid_base):
