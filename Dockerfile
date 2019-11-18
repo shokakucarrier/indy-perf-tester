@@ -25,12 +25,14 @@ ADD pki/Red_Hat_IS_CA.crt /etc/pki/ca-trust/source/anchors/Red_Hat_IS_CA.crt
 ADD pki/RH-IT-Root-CA.crt /etc/pki/ca-trust/source/anchors/RH-IT-Root-CA.crt
 RUN update-ca-trust extract
 
-RUN yum --disablerepo=rhel-fast-datapath -y update && \
-	yum --disablerepo=rhel-fast-datapath -y install git wget which tar gzip bzip2 unzip zip lsof \
+ARG disables="--disablerepo=rhel-server-extras --disablerepo=rhel-server --disablerepo=rhel-fast-datapath --disablerepo=rhel-server-optional --disablerepo=rhel-server-ose --disablerepo=rhel-server-rhscl"
+
+RUN yum $disables -y update && \
+	yum $disables -y install git wget which tar gzip bzip2 unzip zip lsof \
 				   strace perf tcpdump iproute \
 				   java-1.8.0-openjdk-devel java-1.8.0-openjdk-headless java-1.8.0-openjdk-headless && \
 				   python3 python3-pip python-virtualenv && \
-	yum --disablerepo=rhel-fast-datapath clean all && \
+	yum $disables clean all && \
 	git config --system http.sslCAInfo /etc/pki/ca-trust/source/anchors/RH-IT-Root-CA.crt && \
 	sed -i 's/jdk.tls.disabledAlgorithms=SSLv3/jdk.tls.disabledAlgorithms=EC,ECDHE,ECDH,SSLv3/g' $JAVA_HOME/jre/lib/security/java.security && \
 	chmod u+s /usr/sbin/chpasswd /usr/sbin/xtables-multi /usr/sbin/tcpdump
