@@ -61,8 +61,11 @@ pipeline {
                             echo "Starting image build: ${openshift.project()}:${my_bc}"
                             def bc = openshift.selector("bc", my_bc)
                             def buildSel = bc.startBuild()
+
+                            echo "Started image build. Watching logs."
                             buildSel.logs("-f")
 
+                            echo "Checking for image build result"
                             timeout(20) { // Throw exception after 20 minutes
                                 buildSel.untilEach(1) {
                                     return (it.object().status.phase == "Complete")
