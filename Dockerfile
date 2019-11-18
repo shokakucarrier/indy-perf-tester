@@ -25,10 +25,12 @@ ADD pki/Red_Hat_IS_CA.crt /etc/pki/ca-trust/source/anchors/Red_Hat_IS_CA.crt
 ADD pki/RH-IT-Root-CA.crt /etc/pki/ca-trust/source/anchors/RH-IT-Root-CA.crt
 RUN update-ca-trust extract
 
-RUN yum -y update && \
-	yum -y install git wget which tar gzip bzip2 unzip zip lsof \
+RUN yum --disable-repo=rhel-fast-datapath -y update && \
+	yum --disable-repo=rhel-fast-datapath -y install git wget which tar gzip bzip2 unzip zip lsof \
 				   strace perf tcpdump iproute \
 				   java-1.8.0-openjdk-devel java-1.8.0-openjdk-headless java-1.8.0-openjdk-headless && \
+				   python3 python3-pip python-virtualenv && \
+	yum --disable-repo=rhel-fast-datapath clean all && \
 	git config --system http.sslCAInfo /etc/pki/ca-trust/source/anchors/RH-IT-Root-CA.crt && \
 	sed -i 's/jdk.tls.disabledAlgorithms=SSLv3/jdk.tls.disabledAlgorithms=EC,ECDHE,ECDH,SSLv3/g' $JAVA_HOME/jre/lib/security/java.security && \
 	chmod u+s /usr/sbin/chpasswd /usr/sbin/xtables-multi /usr/sbin/tcpdump
@@ -49,9 +51,6 @@ RUN echo "export M2_HOME=/usr/share/maven" >> /etc/profile
 
 RUN chgrp -R 0 /usr/share/maven && \
     chmod -R g=u /usr/share/maven
-
-RUN yum -y install python3 python3-pip python-virtualenv && \
-	yum clean all
 
 
 # ---------------------------------------------------------------
