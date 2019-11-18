@@ -62,6 +62,12 @@ pipeline {
                             def bc = openshift.selector("bc", my_bc)
                             def buildSel = bc.startBuild()
                             buildSel.logs("-f")
+
+                            timeout(20) { // Throw exception after 20 minutes
+                                buildSel.untilEach(1) {
+                                    return (it.object().status.phase == "Complete")
+                                }
+                            }
                         }
                     }
                 }
