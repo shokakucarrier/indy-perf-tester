@@ -25,7 +25,13 @@ setup(
     packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
     install_requires=[
       "requests",
-      "ruamel.yaml"
-    ]
+      "ruamel.yaml",
+      "click"
+    ],
+    entry_points={
+        'console_scripts': [
+            'run-indyperf-test = indyperf:run'
+        ],
+    }
 )
 

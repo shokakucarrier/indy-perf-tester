@@ -1,0 +1,5 @@
+#!/bin/bash
+
+source /etc/profile
+
+exec /usr/share/indy-perf-tester/venv/bin/run-indyperf-test "$@"
