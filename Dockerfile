@@ -43,11 +43,15 @@ ENV MAVEN_VERSION 3.3.9
 ENV PME_VERSION 3.8.1
 
 # NCL-4067: remove useless download progress with batch mode (-B)
-RUN curl -sSL http://archive.apache.org/dist/maven/maven-3/$MAVEN_VERSION/binaries/apache-maven-$MAVEN_VERSION-bin.tar.gz | tar xzf - -C /usr/share \
-	&& curl -sSLo  /usr/share/pme/pme.jar https://repo.maven.apache.org/maven2/org/commonjava/maven/ext/pom-manipulation-cli/$PME_VERSION/pom-manipulation-cli-$PME_VERSION.jar \
-	&& mv /usr/share/apache-maven-$MAVEN_VERSION /usr/share/maven \
-	&& sed -i 's|${CLASSWORLDS_LAUNCHER} "$@"|${CLASSWORLDS_LAUNCHER} -B "$@"|g' /usr/share/maven/bin/mvn \
-	&& ln -s /usr/share/maven/bin/mvn /usr/bin/mvn
+RUN curl -SL http://archive.apache.org/dist/maven/maven-3/$MAVEN_VERSION/binaries/apache-maven-$MAVEN_VERSION-bin.tar.gz | tar xzf - -C /usr/share
+
+RUN curl -SLo  /usr/share/pme/pme.jar https://repo.maven.apache.org/maven2/org/commonjava/maven/ext/pom-manipulation-cli/$PME_VERSION/pom-manipulation-cli-$PME_VERSION.jar
+
+RUN mv /usr/share/apache-maven-$MAVEN_VERSION /usr/share/maven
+
+RUN sed -i 's|${CLASSWORLDS_LAUNCHER} "$@"|${CLASSWORLDS_LAUNCHER} -B "$@"|g' /usr/share/maven/bin/mvn
+
+RUN ln -s /usr/share/maven/bin/mvn /usr/bin/mvn
 
 RUN echo "export M2_HOME=/usr/share/maven" >> /etc/profile
 
