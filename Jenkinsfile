@@ -62,7 +62,7 @@ pipeline {
                             def bc = openshift.selector("bc", my_bc)
                             def buildSel = bc.startBuild()
 
-                            echo "Started image build. Watching logs."
+                            echo "Started image build: ${buildSel.object().name}. Watching logs."
                             buildSel.logs("-f")
 
                             echo "Checking for image build result"

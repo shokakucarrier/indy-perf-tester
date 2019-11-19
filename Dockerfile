@@ -30,7 +30,7 @@ ARG disables="--disablerepo=rhel-server-extras --disablerepo=rhel-server --disab
 RUN yum $disables -y update && \
 	yum $disables -y install git wget which tar gzip bzip2 unzip zip lsof \
 				   strace perf tcpdump iproute \
-				   java-1.8.0-openjdk-devel java-1.8.0-openjdk-headless java-1.8.0-openjdk-headless && \
+				   java-1.8.0-openjdk-devel java-1.8.0-openjdk-headless java-1.8.0-openjdk-headless \
 				   python3 python3-pip python-virtualenv && \
 	yum $disables clean all && \
 	git config --system http.sslCAInfo /etc/pki/ca-trust/source/anchors/RH-IT-Root-CA.crt && \
