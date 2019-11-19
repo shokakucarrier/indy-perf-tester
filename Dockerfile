@@ -68,7 +68,7 @@ RUN chgrp -R 0 /usr/share/maven && \
 RUN mkdir -p /usr/share/indy-perf-tester/indyperf
 
 ADD indyperf /usr/share/indy-perf-tester/indyperf
-ADD requirements.txt /usr/share/indy-perf-tester
+ADD setup.py /usr/share/indy-perf-tester
 ADD scripts/* /usr/local/bin
 
 RUN chmod +x /usr/local/bin/*
