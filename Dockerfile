@@ -20,9 +20,7 @@ ENV TZ=UTC \
 
 USER root
 
-ADD pki/Eng_Ops_CA.crt /etc/pki/ca-trust/source/anchors/Eng_Ops_CA.crt
-ADD pki/Red_Hat_IS_CA.crt /etc/pki/ca-trust/source/anchors/Red_Hat_IS_CA.crt
-ADD pki/RH-IT-Root-CA.crt /etc/pki/ca-trust/source/anchors/RH-IT-Root-CA.crt
+ADD pki/* /etc/pki/ca-trust/source/anchors/
 RUN update-ca-trust extract
 
 ARG disables="--disablerepo=rhel-server-extras --disablerepo=rhel-server --disablerepo=rhel-fast-datapath --disablerepo=rhel-server-optional --disablerepo=rhel-server-ose --disablerepo=rhel-server-rhscl"
