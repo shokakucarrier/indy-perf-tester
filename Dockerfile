@@ -45,6 +45,7 @@ ENV PME_VERSION 3.8.1
 # NCL-4067: remove useless download progress with batch mode (-B)
 RUN curl -SL http://archive.apache.org/dist/maven/maven-3/$MAVEN_VERSION/binaries/apache-maven-$MAVEN_VERSION-bin.tar.gz | tar xzf - -C /usr/share
 
+RUN mkdir -p /usr/share/pme && chmod ugo+x /usr/share/pme
 RUN curl -SLo  /usr/share/pme/pme.jar https://repo.maven.apache.org/maven2/org/commonjava/maven/ext/pom-manipulation-cli/$PME_VERSION/pom-manipulation-cli-$PME_VERSION.jar
 
 RUN mv /usr/share/apache-maven-$MAVEN_VERSION /usr/share/maven
