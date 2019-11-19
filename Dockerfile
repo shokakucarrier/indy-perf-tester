@@ -69,7 +69,7 @@ RUN mkdir -p /usr/share/indy-perf-tester/indyperf
 
 ADD indyperf /usr/share/indy-perf-tester/indyperf
 ADD setup.py /usr/share/indy-perf-tester
-ADD scripts/* /usr/local/bin
+ADD scripts/* /usr/local/bin/
 
 RUN chmod +x /usr/local/bin/*
 
