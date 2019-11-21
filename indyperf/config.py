@@ -100,8 +100,7 @@ def read_config(env_yml, suite_yml):
     if suite_yml is None:
         errors.append(f"Missing test suite file")
     elif os.path.exists(suite_yml):
-        suite_file = os.path.join( suitesDir, suite_yml )
-        with open( suite_file ) as f:
+        with open(suite_yml) as f:
             yaml = YAML(typ='safe')
             suite_spec = yaml.load(f)
     else:
