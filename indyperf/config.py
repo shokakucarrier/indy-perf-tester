@@ -114,12 +114,6 @@ def read_config(env_yml, suite_yml):
     if indy_url is None:
         errors.append(f"Missing Indy URL configuration: {ENV_INDY_URL}")
 
-    if builders is None:
-        errors.append(f"Missing builder count configuration: {ENV_BUILDERS}")
-
-    if builder_idx is None:
-        errors.append(f"Missing builder configuration: {ENV_NODENAME}")
-
     if len(errors) > 0:
         print("\n".join(errors))
         raise Exception("Invalid configuration")
