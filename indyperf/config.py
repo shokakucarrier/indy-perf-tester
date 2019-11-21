@@ -117,8 +117,6 @@ def read_config(env_yml, suite_yml):
     if builders is None:
         errors.append(f"Missing builder count configuration: {ENV_BUILDERS}")
 
-    suitesDir = env.get('suites_dir') or '/suites'
-
     if builder_idx is None:
         errors.append(f"Missing builder configuration: {ENV_NODENAME}")
 
