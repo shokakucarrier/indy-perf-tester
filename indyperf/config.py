@@ -1,12 +1,9 @@
 from ruamel.yaml import YAML
 import os
 
-ENV_SUITE_YML = 'suite_yml'
 ENV_INDY_URL = 'indy_url'
 ENV_DA_URL = 'DA_url'
 ENV_PROXY_PORT = 'proxy_port'
-ENV_BUILDERS = 'total_builders'
-ENV_BUILDER_IDX = 'builder'
 
 TEST_BUILDS_SECTION = 'builds'
 TEST_PROMOTE_BY_PATH_FLAG = 'promote-by-path'
@@ -54,10 +51,8 @@ class Build:
         self.build_count = spec.get(BUILD_TIMES)
 
 class Suite:
-    def __init__(self, suite_spec, builders, builder_idx, indy_url, da_url, proxy_port):
+    def __init__(self, suite_spec, indy_url, da_url, proxy_port):
         self.suite_spec = suite_spec
-        self.builders = builders
-        self.builder_idx = builder_idx
         self.indy_url = indy_url
         self.da_url = da_url
         self.proxy_port = proxy_port
@@ -115,8 +110,6 @@ def read_config(env_yml, suite_yml):
     indy_url = env.get(ENV_INDY_URL)
     da_url = env.get(ENV_DA_URL)
     proxy_port = env.get(ENV_PROXY_PORT) or '8081'
-    builders = env.get(ENV_BUILDERS)
-    builder_idx = env.get(ENV_BUILDER_IDX)
 
     errors = []
     if indy_url is None:
@@ -134,10 +127,10 @@ def read_config(env_yml, suite_yml):
         print("\n".join(errors))
         raise Exception("Invalid configuration")
 
-    return Suite(suite_spec, builders, builder_idx, indy_url, da_url, proxy_port)
+    return Suite(suite_spec, indy_url, da_url, proxy_port)
 
 
-def create_build_order(config):
+def create_build_order(config, builder_idx, total_builders):
     """ Iterate through the builds in this suite configuration, finding all builds that match the current builder index.
 
     Builds are matched using a synthetic array index (the order given in the build map will be used to generate a synthetic array index here).
@@ -156,7 +149,7 @@ def create_build_order(config):
     counter=0
     passes = 0
     for build in config.builds.items():
-        if counter % config.builders == config.builder_idx:
+        if counter % total_builders == builder_idx:
             included_builds.append(build.name)
             build_passes = build.build_count or 1
             if build_passes > passes:

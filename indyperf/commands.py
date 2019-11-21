@@ -6,8 +6,12 @@ import indyperf.config as config
 
 @click.command()
 @click.argument('suite_yml')
-@click.argument('env_yml')
-def run(suite_yml, env_yml):
+@click.argument('builder_idx')
+@click.argument('total_builders')
+@click.option('-E', '--env-yml', 
+    type=click.Path(exists=True), default='/target/env.yml', 
+    help='Target environment, including Indy/DA URLs and Indy proxy port')
+def run(suite_yml, builder_idx, total_builders, env_yml):
     """ Execute a test run from start to end.
 
         This will read a YAML file containing variables for the target environment, and
@@ -42,7 +46,7 @@ def run(suite_yml, env_yml):
         NOTE: This process should mimic the calls and sequence executed by PNC as closely as possible!
     """
     suite = config.read_config(env_yml, suite_yml)
-    order = config.create_build_order(suite)
+    order = config.create_build_order(suite, builder_idx, total_builders)
 
     for build in order.iter():
         print(f"Running build: {build.name}")
