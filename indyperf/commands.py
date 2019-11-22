@@ -57,6 +57,7 @@ def run(suite_yml, builder_idx, total_builders, env_yml, sso_yml, builds_dir):
     if builds_dir is None:
         builds_dir = os.getcwd()
 
+    print(f"SSL verification enabled? {suite.ssl_verify}")
     sso.get_sso_token(suite)
 
     for build in order.iter():
