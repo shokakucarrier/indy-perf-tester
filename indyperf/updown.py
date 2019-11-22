@@ -1,5 +1,6 @@
 import requests
 import os
+import json
 from datetime import datetime as dt
 from urllib.parse import urlparse
 from indyperf.utils import (run_cmd, POST_HEADERS)
@@ -8,6 +9,8 @@ SETTINGS = """
 <?xml version="1.0"?>
 <settings>
   <localRepository>/tmp/repository</localRepository>
+  <interactiveMode>false</interactiveMode>
+
   <mirrors>
     <mirror>
       <id>indy</id>
@@ -15,6 +18,23 @@ SETTINGS = """
       <url>%(url)s/api/folo/track/%(id)s/maven/group/%(id)s</url>
     </mirror>
   </mirrors>
+
+  <servers>
+    <server>
+      <id>indy</id>
+      <configuration>
+        <httpConfiguration>
+          <all>
+            <connectionTimeout>60000</connectionTimeout>
+            <headers>
+              %(headers)s
+            </headers>
+          </all>
+        </httpConfiguration>
+      </configuration>
+    </server>
+  </servers>
+
   <proxies>
     <proxy>
       <id>indy-httprox</id>
@@ -23,52 +43,22 @@ SETTINGS = """
       <host>%(host)s</host>
       <port>%(proxy_port)s</port>
       <username>%(id)s+tracking</username>
-      <password>foo</password>
+      <password>%(token)s</password>
       <nonProxyHosts>%(host)s</nonProxyHosts>
     </proxy>
   </proxies>
+
   <profiles>
-    <profile>
-      <id>resolve-settings</id>
-      <repositories>
-        <repository>
-          <id>central</id>
-          <url>%(url)s/api/folo/track/%(id)s/maven/group/%(id)s</url>
-          <releases>
-            <enabled>true</enabled>
-          </releases>
-          <snapshots>
-            <enabled>false</enabled>
-          </snapshots>
-        </repository>
-      </repositories>
-      <pluginRepositories>
-        <pluginRepository>
-          <id>central</id>
-          <url>%(url)s/api/folo/track/%(id)s/maven/group/%(id)s</url>
-          <releases>
-            <enabled>true</enabled>
-          </releases>
-          <snapshots>
-            <enabled>false</enabled>
-          </snapshots>
-        </pluginRepository>
-      </pluginRepositories>
-    </profile>
-    
     <profile>
       <id>deploy-settings</id>
       <properties>
-        <altDeploymentRepository>%(id)s::default::%(url)s/api/folo/track/%(id)s/maven/hosted/%(id)s</altDeploymentRepository>
+        <altDeploymentRepository>indy::default::%(url)s/api/folo/track/%(id)s/maven/hosted/%(id)s</altDeploymentRepository>
       </properties>
     </profile>
-    
   </profiles>
+
   <activeProfiles>
-    <activeProfile>resolve-settings</activeProfile>
-    
     <activeProfile>deploy-settings</activeProfile>
-    
   </activeProfiles>
 </settings>
 """
@@ -83,7 +73,10 @@ def setup_builddir(builds_dir, build, tid_base):
 
     run_cmd("git clone -l -b %s %s %s" % (build.git_branch, build.git_url, builddir))
     
-    return os.path.join(os.getcwd(), builddir)
+    builddir = os.path.join(os.getcwd(), builddir)
+    tid = os.path.basename(builddir)
+
+    return (builddir, tid)
 
 
 def cleanup_build_group(id, suite):
@@ -92,7 +85,7 @@ def cleanup_build_group(id, suite):
     """
 
     print(f"Deleting temporary group:{id} used for build time only")
-    resp = requests.delete(f"{suite.indy_url}/api/admin/group/{id}")
+    resp = requests.delete(f"{suite.indy_url}/api/admin/group/{id}", headers=suite.headers)
     resp.raise_for_status()
 
 
@@ -105,10 +98,12 @@ def create_repos_and_settings(builddir, id, suite):
     parsed = urlparse(suite.indy_url)
     params = {
         'url':suite.indy_url, 
-        'id': tid, 
+        'id': id, 
         'host': parsed.hostname, 
         'port': parsed.port, 
-        'proxy_port': suite.proxy_port
+        'proxy_port': suite.proxy_port,
+        'token': suite.token,
+        'headers': "\n".join([f"<property><name>{name}</name><value>{value}</value></property>" for name,value in suite.headers.items()])
     }
 
     create_missing_stores(id, suite)
@@ -140,6 +135,9 @@ def create_missing_stores(id, suite):
         ]
     })
 
+    post_headers = {**POST_HEADERS, **suite.headers}
+    print(f"Using POST headers for repo creation:\n\n{post_headers}")
+
     for store in suite.stores:
         store_type = store['type']
         package_type = store.get('package_type')
@@ -157,7 +155,7 @@ def create_missing_stores(id, suite):
         if resp.status_code == 404:
             print("POSTing: %s" % json.dumps(store, indent=2))
 
-            resp = requests.post(base_url, json=store, headers=POST_HEADERS)
+            resp = requests.post(base_url, json=store, headers=post_headers)
             resp.raise_for_status()
 
 

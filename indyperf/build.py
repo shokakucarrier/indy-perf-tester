@@ -18,17 +18,19 @@ DEFAULT_PME_ARGS = [
 def do_pme(builddir, build, suite):
     ctx_dir = build.git_context_dir or '.'
 
+    print(f"Raw PME args: '{build.pme_args}'")
     args = build.pme_args or " ".join(DEFAULT_PME_ARGS)
-    args = args.format({'da_url': suite.da_url})
+    args = args.format(da_url=suite.da_url)
 
-    run_cmd(f"jar -jar /usr/share/pme/pme.jar -f {ctx_dir}/pom.xml -s ./settings.xml {args} -l 2>&1 | tee ./pme.log", builddir, fail=False)
+    run_cmd(f"java -jar /usr/share/pme/pme.jar -f {ctx_dir}/pom.xml -s ./settings.xml {args} 2>&1 | tee ./pme.log", builddir, fail=False)
 
 
 def do_build(builddir, build, suite):
     ctx_dir = build.git_context_dir or '.'
 
+    print(f"Raw maven args: '{build.mvn_args}'")
     args = build.mvn_args or ''
-    args = args.format({'indy_url': suite.indy_url})
+    args = args.format(indy_url=suite.indy_url)
 
     run_cmd(f"mvn -f {ctx_dir}/pom.xml -s ./settings.xml {args} clean deploy 2>&1 | tee ./mvn.log", builddir, fail=False)
 

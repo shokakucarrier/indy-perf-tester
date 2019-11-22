@@ -1,18 +1,21 @@
 import requests
+from indyperf.utils import POST_HEADERS
 
 def seal_folo_report(id, suite):
     """Seal the Folo tracking report after the build completes"""
 
+    post_headers = {**POST_HEADERS, **suite.headers}
     print(f"Sealing folo tracking report for: {id}")
-    resp = requests.post(f"{suite.indy_url}/api/folo/admin/{id}/record", data={})
+    resp = requests.post(f"{suite.indy_url}/api/folo/admin/{id}/record", data={}, headers=post_headers)
     resp.raise_for_status()
 
 
 def pull_folo_report(id, suite):
     """Pull the Folo tracking report associated with the current build"""
 
+    post_headers = {**POST_HEADERS, **suite.headers}
     print(f"Retrieving folo tracking report for: {id}")
-    resp = requests.get(f"{suite.indy_url}/api/folo/admin/{id}/record")
+    resp = requests.get(f"{suite.indy_url}/api/folo/admin/{id}/record", headers=post_headers)
     resp.raise_for_status()
 
     return resp.json()
@@ -37,27 +40,30 @@ def promote_deps_by_path(folo_report, id, suite):
 
                     paths.append(path)
 
+    post_headers = {**POST_HEADERS, **suite.headers}
     print(f"Promoting dependencies from {len(to_promote.keys())} sources into hosted:shared-imports")
     for key in to_promote:
         req = {'source': key, 'target': 'hosted:shared-imports', 'paths': to_promote[key]}
-        resp = requests.post(f"{suite.indy_url}/api/promotion/paths/promote", json=req, headers=POST_HEADERS)
+        resp = requests.post(f"{suite.indy_url}/api/promotion/paths/promote", json=req, headers=post_headers)
         resp.raise_for_status()
 
 def promote_output_by_path(id, suite):
     """Run by-path promotion of uploaded content"""
 
+    post_headers = {**POST_HEADERS, **suite.headers}
     print(f"Promoting build output in hosted:{id} to membership of hosted:builds")
     req = {'source': f"hosted:{id}", 'target': 'hosted:builds'}
-    resp = requests.post(f"{suite.indy_url}/api/promotion/paths/promote", json=req, headers=POST_HEADERS)
+    resp = requests.post(f"{suite.indy_url}/api/promotion/paths/promote", json=req, headers=post_headers)
     resp.raise_for_status()
 
 
 def promote_output_by_group(id, suite):
     """Run by-group promotion of uploaded content"""
 
+    post_headers = {**POST_HEADERS, **suite.headers}
     print(f"Promoting build output in hosted:{id} to membership of group:builds")
     req = {'source': f"hosted:{id}", 'targetGroup': 'builds'}
-    resp = requests.post(f"{suite.indy_url}/api/promotion/groups/promote", json=req, headers=POST_HEADERS)
+    resp = requests.post(f"{suite.indy_url}/api/promotion/groups/promote", json=req, headers=post_headers)
     resp.raise_for_status()
 
 

@@ -1,8 +1,10 @@
 import click
 import os
 import indyperf.updown as updown
-import indyperf.build as build
+import indyperf.build as builds
+import indyperf.promote as promote
 import indyperf.config as config
+import indyperf.sso as sso
 
 @click.command()
 @click.argument('suite_yml')
@@ -11,7 +13,11 @@ import indyperf.config as config
 @click.option('-E', '--env-yml', 
     type=click.Path(exists=True), default='/target/env.yml', 
     help='Target environment, including Indy/DA URLs and Indy proxy port')
-def run(suite_yml, builder_idx, total_builders, env_yml):
+@click.option('-S', '--sso-yml', 
+    type=click.Path(exists=True), default='/target/sso.yml', 
+    help='Target environment SSO configuration')
+@click.option('-B', '--builds-dir', help='Base directory where builds should be cloned and run (defaults to $PWD)')
+def run(suite_yml, builder_idx, total_builders, env_yml, sso_yml, builds_dir):
     """ Execute a test run from start to end.
 
         This will read a YAML file containing variables for the target environment, and
@@ -45,30 +51,35 @@ def run(suite_yml, builder_idx, total_builders, env_yml):
 
         NOTE: This process should mimic the calls and sequence executed by PNC as closely as possible!
     """
-    suite = config.read_config(env_yml, suite_yml)
+    suite = config.read_config(suite_yml, env_yml, sso_yml)
     order = config.create_build_order(suite, builder_idx, total_builders)
+    if builds_dir is None:
+        builds_dir = os.getcwd()
+
+    sso.get_sso_token(suite)
 
     for build in order.iter():
         print(f"Running build: {build.name}")
 
-        tid_base = f"build_{build.name}"
+        tid_base = f"build_perftest-{build.name}"
 
-        builddir = setup_builddir(os.getcwd(), build, tid_base)
-        tid = os.path.basename(builddir)
+        try:
+            (builddir, tid) = updown.setup_builddir(builds_dir, build, tid_base)
 
-        create_repos_and_settings(builddir, tid, suite);
+            updown.create_repos_and_settings(builddir, tid, suite);
 
-        do_pme(builddir, build)
-        do_build(builddir, build)
+            print(f"Running test with:\n\nDA URL: {suite.da_url}\nIndy URL: {suite.indy_url}")
+            builds.do_pme(builddir, build, suite)
+            builds.do_build(builddir, build, suite)
 
-        seal_folo_report(tid, suite)
+            promote.seal_folo_report(tid, suite)
 
-        folo_report = pull_folo_report(tid, suite)
-        promote_deps_by_path(folo_report, tid, suite)
+            folo_report = promote.pull_folo_report(tid, suite)
+            promote.promote_deps_by_path(folo_report, tid, suite)
 
-        if promote_by_path is True:
-            promote_output_by_path(tid, suite)
-        else:
-            promote_output_by_group(tid, suite)
-
-        cleanup_build_group(tid, suite)
+            if suite.promote_by_path is True:
+                promote.promote_output_by_path(tid, suite)
+            else:
+                promote.promote_output_by_group(tid, suite)
+        finally:
+            updown.cleanup_build_group(tid, suite)

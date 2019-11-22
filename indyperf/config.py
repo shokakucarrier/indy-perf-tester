@@ -16,6 +16,7 @@ BUILD_GIT_BRANCH = 'git-branch'
 BUILD_GIT_CONTEXT_DIR = 'git-context-dir'
 BUILD_TIMES = 'times'
 
+DEFAULT_PROXY_PORT = 8081
 DEFAULT_STORES = [
     {          
         'type': 'hosted', 
@@ -51,11 +52,14 @@ class Build:
         self.build_count = spec.get(BUILD_TIMES)
 
 class Suite:
-    def __init__(self, suite_spec, indy_url, da_url, proxy_port):
+    def __init__(self, suite_spec, indy_url, da_url, proxy_port, sso):
         self.suite_spec = suite_spec
         self.indy_url = indy_url
         self.da_url = da_url
         self.proxy_port = proxy_port
+        self.sso = sso
+        self.headers = {}
+        self.token = None
 
         self.promote_by_path = suite_spec.get(TEST_PROMOTE_BY_PATH_FLAG) or True
         self.stores = suite_spec.get(TEST_STORES) or DEFAULT_STORES.copy()
@@ -66,6 +70,11 @@ class Suite:
         for (name,spec) in build_specs.items():
             self.builds[name] = Build(name, spec)
 
+    def set_sso_token(self, token):
+        self.token = token
+        self.headers = {
+            'Authorization': f"Bearer {token}"
+        }
 
 class BuildOrder:
     def __init__(self, builds, ordered_build_names):
@@ -73,10 +82,10 @@ class BuildOrder:
         self.ordered_build_names = ordered_build_names
 
     def iter(self):
-        return iter([builds[name] for name in self.ordered_build_names])
+        return iter([self.builds[name] for name in self.ordered_build_names])
 
 
-def read_config(env_yml, suite_yml):
+def read_config(suite_yml, env_yml, sso_yml):
     """ Read the suite configuration that this worker should run, from a config.yml file 
     (specified on the command line and passed in as a parameter here). 
 
@@ -88,6 +97,15 @@ def read_config(env_yml, suite_yml):
     message containing all of the problems will be logged to the console and an
     exception will be raised.
     """
+    sso = None
+    if sso_yml is not None:
+        if not os.path.exists(sso_yml):
+            errors.append( f"Missing SSO config file: {sso_yml}")
+        else:
+            with open(sso_yml) as f:
+                yaml = YAML(typ='safe')
+                sso = yaml.load(f)
+
     if env_yml is None:
         errors.append(f"Missing test environment config file")
     elif os.path.exists(env_yml):
@@ -108,20 +126,29 @@ def read_config(env_yml, suite_yml):
 
     indy_url = env.get(ENV_INDY_URL)
     da_url = env.get(ENV_DA_URL)
-    proxy_port = env.get(ENV_PROXY_PORT) or '8081'
+    proxy_port = env.get(ENV_PROXY_PORT) or DEFAULT_PROXY_PORT
 
     errors = []
     if indy_url is None:
         errors.append(f"Missing Indy URL configuration: {ENV_INDY_URL}")
 
+    if da_url is None:
+        errors.append(f"Missing DA URL configuration: {ENV_DA_URL}")
+
     if len(errors) > 0:
         print("\n".join(errors))
         raise Exception("Invalid configuration")
 
-    return Suite(suite_spec, indy_url, da_url, proxy_port)
+    if indy_url.endswith('/'):
+        indy_url = indy_url[:-1]
+
+    if da_url.endswith('/'):
+        da_url = da_url[:-1]
+
+    return Suite(suite_spec, indy_url, da_url, proxy_port, sso)
 
 
-def create_build_order(config, builder_idx, total_builders):
+def create_build_order(suite, builder_idx, total_builders):
     """ Iterate through the builds in this suite configuration, finding all builds that match the current builder index.
 
     Builds are matched using a synthetic array index (the order given in the build map will be used to generate a synthetic array index here).
@@ -139,9 +166,9 @@ def create_build_order(config, builder_idx, total_builders):
 
     counter=0
     passes = 0
-    for build in config.builds.items():
-        if counter % total_builders == builder_idx:
-            included_builds.append(build.name)
+    for name, build in suite.builds.items():
+        if counter % int(total_builders) == int(builder_idx):
+            included_builds.append(name)
             build_passes = build.build_count or 1
             if build_passes > passes:
                 passes = build_passes
@@ -149,14 +176,14 @@ def create_build_order(config, builder_idx, total_builders):
     ordered_builds = []
     for passidx in range(passes):
         for name in included_builds:
-            build = config.builds[name]
+            build = suite.builds[name]
             build_passes = build.build_count or 1
             if passidx < build_passes:
                 ordered_builds.append(name)
 
-    order_str = "\n- ".join(ordered_builds)
+    order_str = '- ' + "\n- ".join(ordered_builds)
     print(f"My build order:\n{order_str}")
 
-    return BuildOrder(builds, ordered_builds)
+    return BuildOrder(suite.builds, ordered_builds)
 
 
