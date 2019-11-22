@@ -4,6 +4,7 @@ import os
 ENV_INDY_URL = 'indy_url'
 ENV_DA_URL = 'DA_url'
 ENV_PROXY_PORT = 'proxy_port'
+ENV_SSL_VERIFY = 'ssl_verify'
 
 TEST_BUILDS_SECTION = 'builds'
 TEST_PROMOTE_BY_PATH_FLAG = 'promote-by-path'
@@ -54,11 +55,12 @@ class Build:
         self.build_count = spec.get(BUILD_TIMES)
 
 class Suite:
-    def __init__(self, suite_spec, indy_url, da_url, proxy_port, sso):
+    def __init__(self, suite_spec, indy_url, da_url, proxy_port, ssl_verify, sso):
         self.suite_spec = suite_spec
         self.indy_url = indy_url
         self.da_url = da_url
         self.proxy_port = proxy_port
+        self.ssl_verify = ssl_verify
         self.sso = sso
         self.headers = {}
         self.token = None
@@ -130,6 +132,7 @@ def read_config(suite_yml, env_yml, sso_yml):
     indy_url = env.get(ENV_INDY_URL)
     da_url = env.get(ENV_DA_URL)
     proxy_port = env.get(ENV_PROXY_PORT) or DEFAULT_PROXY_PORT
+    ssl_verify = env.get(ENV_SSL_VERIFY) or True
 
     errors = []
     if indy_url is None:
@@ -148,7 +151,7 @@ def read_config(suite_yml, env_yml, sso_yml):
     if da_url.endswith('/'):
         da_url = da_url[:-1]
 
-    return Suite(suite_spec, indy_url, da_url, proxy_port, sso)
+    return Suite(suite_spec, indy_url, da_url, proxy_port, ssl_verify, sso)
 
 
 def create_build_order(suite, builder_idx, total_builders):
@@ -170,11 +173,14 @@ def create_build_order(suite, builder_idx, total_builders):
     counter=0
     passes = 0
     for name, build in suite.builds.items():
+        # print(f"Checking build: {name} ({counter} % {total_builders} == {builder_idx})")
         if counter % int(total_builders) == int(builder_idx):
+            # print(f"Including build: {name}")
             included_builds.append(name)
             build_passes = build.build_count or 1
             if build_passes > passes:
                 passes = build_passes
+        counter+=1
 
     ordered_builds = []
     for passidx in range(passes):

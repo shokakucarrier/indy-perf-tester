@@ -82,7 +82,7 @@ def run(suite_yml, builder_idx, total_builders, env_yml, sso_yml, builds_dir):
                 promote.promote_output_by_path(tid, suite)
             else:
                 promote.promote_output_by_group(tid, suite)
-        except e as Exception:
+        except Exception as e:
             print(f"Build: {build.name} had an error: {e}")
         finally:
             updown.cleanup_build_group(tid, suite)

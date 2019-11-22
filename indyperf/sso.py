@@ -11,7 +11,6 @@ SSO_URL = 'url'
 SSO_REALM = 'realm'
 SSO_CLIENT_ID = 'client_id'
 SSO_CLIENT_SECRET = 'client_secret'
-SSO_SSL_VERIFY = 'ssl_verify'
 SSO_USERNAME = 'username'
 SSO_PASSWORD = 'password'
 
@@ -19,7 +18,6 @@ def get_sso_token(suite):
     if suite.sso is None or suite.sso.get(SSO_ENABLE) is False:
         return None
 
-    verify = suite.sso.get(SSO_SSL_VERIFY) or True
     grant_type = suite.sso.get(SSO_GRANT_TYPE) or DEFAULT_SSO_GRANT_TYPE
 
     if grant_type == DEFAULT_SSO_GRANT_TYPE:
@@ -39,7 +37,7 @@ def get_sso_token(suite):
 
     url = f"{suite.sso[SSO_URL]}/auth/realms/{suite.sso[SSO_REALM]}/protocol/openid-connect/token"
 
-    response = requests.post( url, data=form, verify=verify )
+    response = requests.post(url, data=form, verify=suite.ssl_verify)
     response.raise_for_status()
 
     token = response.json()['access_token']

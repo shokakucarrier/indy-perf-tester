@@ -85,7 +85,7 @@ def cleanup_build_group(id, suite):
     """
 
     print(f"Deleting temporary group:{id} used for build time only")
-    resp = requests.delete(f"{suite.indy_url}/api/admin/group/{id}", headers=suite.headers)
+    resp = requests.delete(f"{suite.indy_url}/api/admin/group/{id}", headers=suite.headers, verify=suite.ssl_verify)
     resp.raise_for_status()
 
 
@@ -151,11 +151,11 @@ def create_missing_stores(id, suite):
         store['disabled'] = False
 
         base_url = f"{suite.indy_url}/api/admin/stores/{package_type}/{store_type}"
-        resp = requests.head(f"{base_url}/{store['name']}")
+        resp = requests.head(f"{base_url}/{store['name']}", headers=suite.headers, verify=suite.ssl_verify)
         if resp.status_code == 404:
             print("POSTing: %s" % json.dumps(store, indent=2))
 
-            resp = requests.post(base_url, json=store, headers=post_headers)
+            resp = requests.post(base_url, json=store, headers=post_headers, verify=suite.ssl_verify)
             resp.raise_for_status()
 
 

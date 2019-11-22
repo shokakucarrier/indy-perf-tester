@@ -6,7 +6,7 @@ def seal_folo_report(id, suite):
 
     post_headers = {**POST_HEADERS, **suite.headers}
     print(f"Sealing folo tracking report for: {id}")
-    resp = requests.post(f"{suite.indy_url}/api/folo/admin/{id}/record", data={}, headers=post_headers)
+    resp = requests.post(f"{suite.indy_url}/api/folo/admin/{id}/record", data={}, headers=post_headers, verify=suite.ssl_verify)
     resp.raise_for_status()
 
 
@@ -15,7 +15,7 @@ def pull_folo_report(id, suite):
 
     post_headers = {**POST_HEADERS, **suite.headers}
     print(f"Retrieving folo tracking report for: {id}")
-    resp = requests.get(f"{suite.indy_url}/api/folo/admin/{id}/record", headers=post_headers)
+    resp = requests.get(f"{suite.indy_url}/api/folo/admin/{id}/record", headers=post_headers, verify=suite.ssl_verify)
     resp.raise_for_status()
 
     return resp.json()
@@ -44,7 +44,7 @@ def promote_deps_by_path(folo_report, id, suite):
     print(f"Promoting dependencies from {len(to_promote.keys())} sources into hosted:shared-imports")
     for key in to_promote:
         req = {'source': key, 'target': 'hosted:shared-imports', 'paths': to_promote[key]}
-        resp = requests.post(f"{suite.indy_url}/api/promotion/paths/promote", json=req, headers=post_headers)
+        resp = requests.post(f"{suite.indy_url}/api/promotion/paths/promote", json=req, headers=post_headers, verify=suite.ssl_verify)
         resp.raise_for_status()
 
 def promote_output_by_path(id, suite):
@@ -53,7 +53,7 @@ def promote_output_by_path(id, suite):
     post_headers = {**POST_HEADERS, **suite.headers}
     print(f"Promoting build output in hosted:{id} to membership of hosted:builds")
     req = {'source': f"hosted:{id}", 'target': 'hosted:builds'}
-    resp = requests.post(f"{suite.indy_url}/api/promotion/paths/promote", json=req, headers=post_headers)
+    resp = requests.post(f"{suite.indy_url}/api/promotion/paths/promote", json=req, headers=post_headers, verify=suite.ssl_verify)
     resp.raise_for_status()
 
 
@@ -63,7 +63,7 @@ def promote_output_by_group(id, suite):
     post_headers = {**POST_HEADERS, **suite.headers}
     print(f"Promoting build output in hosted:{id} to membership of group:builds")
     req = {'source': f"hosted:{id}", 'targetGroup': 'builds'}
-    resp = requests.post(f"{suite.indy_url}/api/promotion/groups/promote", json=req, headers=post_headers)
+    resp = requests.post(f"{suite.indy_url}/api/promotion/groups/promote", json=req, headers=post_headers, verify=suite.ssl_verify)
     resp.raise_for_status()
 
 
