@@ -1,5 +1,6 @@
 import click
 import os
+from time import sleep
 import indyperf.updown as updown
 import indyperf.build as builds
 import indyperf.promote as promote
@@ -81,5 +82,10 @@ def run(suite_yml, builder_idx, total_builders, env_yml, sso_yml, builds_dir):
                 promote.promote_output_by_path(tid, suite)
             else:
                 promote.promote_output_by_group(tid, suite)
+        except e as Exception:
+            print(f"Build: {build.name} had an error: {e}")
         finally:
             updown.cleanup_build_group(tid, suite)
+
+        print(f"Pausing {suite.pause} before next build")
+        sleep(suite.pause)

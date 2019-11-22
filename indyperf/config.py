@@ -8,6 +8,7 @@ ENV_PROXY_PORT = 'proxy_port'
 TEST_BUILDS_SECTION = 'builds'
 TEST_PROMOTE_BY_PATH_FLAG = 'promote-by-path'
 TEST_STORES = 'stores'
+TEST_PAUSE = 'pause-between-builds'
 
 BUILD_MVN_ARGS = 'mvn-args'
 BUILD_PME_ARGS = 'pme-args'
@@ -16,6 +17,7 @@ BUILD_GIT_BRANCH = 'git-branch'
 BUILD_GIT_CONTEXT_DIR = 'git-context-dir'
 BUILD_TIMES = 'times'
 
+DEFAULT_PAUSE = 5
 DEFAULT_PROXY_PORT = 8081
 DEFAULT_STORES = [
     {          
@@ -62,6 +64,7 @@ class Suite:
         self.token = None
 
         self.promote_by_path = suite_spec.get(TEST_PROMOTE_BY_PATH_FLAG) or True
+        self.pause = suite_spec.get(TEST_PAUSE) or DEFAULT_PAUSE
         self.stores = suite_spec.get(TEST_STORES) or DEFAULT_STORES.copy()
 
         build_specs = suite_spec.get(TEST_BUILDS_SECTION) or {}
