@@ -132,7 +132,9 @@ def read_config(suite_yml, env_yml, sso_yml):
     indy_url = env.get(ENV_INDY_URL)
     da_url = env.get(ENV_DA_URL)
     proxy_port = env.get(ENV_PROXY_PORT) or DEFAULT_PROXY_PORT
-    ssl_verify = env.get(ENV_SSL_VERIFY) or True
+    ssl_verify = env.get(ENV_SSL_VERIFY)
+    if ssl_verify is None:
+        ssl_verify = True
 
     errors = []
     if indy_url is None:
