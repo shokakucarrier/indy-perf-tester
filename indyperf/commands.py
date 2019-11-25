@@ -1,5 +1,6 @@
 import click
 import os
+import sys
 from time import sleep
 import indyperf.updown as updown
 import indyperf.build as builds
@@ -60,6 +61,7 @@ def run(suite_yml, builder_idx, total_builders, env_yml, sso_yml, builds_dir):
     print(f"SSL verification enabled? {suite.ssl_verify}")
     sso.get_sso_token(suite)
 
+    build_results = []
     for build in order.iter():
         print(f"Running build: {build.name}")
 
@@ -71,8 +73,16 @@ def run(suite_yml, builder_idx, total_builders, env_yml, sso_yml, builds_dir):
             updown.create_repos_and_settings(builddir, tid, suite);
 
             print(f"Running test with:\n\nDA URL: {suite.da_url}\nIndy URL: {suite.indy_url}")
-            builds.do_pme(builddir, build, suite)
-            builds.do_build(builddir, build, suite)
+
+            success = builds.do_pme(builddir, build, suite)
+
+            if success is True:
+                success = builds.do_build(builddir, build, suite)
+
+            if success is True:
+                failed_builds.append({'name': build.name, 'results': ['X', '_']})
+            else:
+                failed_builds.append({'name': build.name, 'results': ['_', 'X']})
 
             promote.seal_folo_report(tid, suite)
 
@@ -90,3 +100,13 @@ def run(suite_yml, builder_idx, total_builders, env_yml, sso_yml, builds_dir):
 
         print(f"Pausing {suite.pause} before next build")
         sleep(suite.pause)
+
+    result_headers = ['Success', 'Fail']
+    row_format = "{:>15}" * (len(result_headers) + 1)
+    print(row_format.format("", *result_headers))
+    for result in build_results:
+        results = result['results']
+        print(row_format.format(result['name'], *results))
+
+    if len(failed_builds) > 0:
+        sys.exit(1)

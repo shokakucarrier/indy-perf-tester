@@ -17,6 +17,8 @@ def run_cmd(cmd, work_dir=None, fail=True):
             print("Error running command: %s (return value: %s)" % (cmd, ret))
             if fail:
                 raise Exception("Failed to run: '%s' (return value: %s)" % (cmd, ret))
+
+        return ret
     finally:
         if work_dir is not None:
             os.chdir(old_dir)
