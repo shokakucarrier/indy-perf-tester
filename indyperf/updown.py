@@ -96,7 +96,6 @@ def create_repos_and_settings(builddir, id, suite):
     """
 
     parsed = urlparse(suite.indy_url)
-    proxy_enabled = 'true' if  is True else 'false'
     params = {
         'url':suite.indy_url, 
         'id': id, 
