@@ -3,6 +3,7 @@ import os
 
 ENV_INDY_URL = 'indy_url'
 ENV_DA_URL = 'DA_url'
+ENV_PROXY_ENABLED = 'proxy_enabled'
 ENV_PROXY_PORT = 'proxy_port'
 ENV_SSL_VERIFY = 'ssl_verify'
 
