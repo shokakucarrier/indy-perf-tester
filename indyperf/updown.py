@@ -38,7 +38,7 @@ SETTINGS = """
   <proxies>
     <proxy>
       <id>indy-httprox</id>
-      <active>true</active>
+      <active>%(proxy_enabled)s</active>
       <protocol>http</protocol>
       <host>%(host)s</host>
       <port>%(proxy_port)s</port>
@@ -96,11 +96,13 @@ def create_repos_and_settings(builddir, id, suite):
     """
 
     parsed = urlparse(suite.indy_url)
+    proxy_enabled = 'true' if  is True else 'false'
     params = {
         'url':suite.indy_url, 
         'id': id, 
         'host': parsed.hostname, 
         'port': parsed.port, 
+        'proxy_enabled': str(suite.proxy_enabled).lower(),
         'proxy_port': suite.proxy_port,
         'token': suite.token,
         'headers': "\n".join([f"<property><name>{name}</name><value>{value}</value></property>" for name,value in suite.headers.items()])

@@ -19,6 +19,7 @@ BUILD_GIT_CONTEXT_DIR = 'git-context-dir'
 BUILD_TIMES = 'times'
 
 DEFAULT_PAUSE = 5
+DEFAULT_PROXY_ENABLED = False
 DEFAULT_PROXY_PORT = 8081
 DEFAULT_STORES = [
     {          
@@ -131,6 +132,7 @@ def read_config(suite_yml, env_yml, sso_yml):
 
     indy_url = env.get(ENV_INDY_URL)
     da_url = env.get(ENV_DA_URL)
+    proxy_enabled = env.get(ENV_PROXY_ENABLED) or DEFAULT_PROXY_ENABLED
     proxy_port = env.get(ENV_PROXY_PORT) or DEFAULT_PROXY_PORT
     ssl_verify = env.get(ENV_SSL_VERIFY)
     if ssl_verify is None:
