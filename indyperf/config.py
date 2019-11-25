@@ -157,7 +157,7 @@ def read_config(suite_yml, env_yml, sso_yml):
     if da_url.endswith('/'):
         da_url = da_url[:-1]
 
-    return Suite(suite_spec, indy_url, da_url, oroxy_enabled, proxy_port, ssl_verify, sso)
+    return Suite(suite_spec, indy_url, da_url, proxy_enabled, proxy_port, ssl_verify, sso)
 
 
 def create_build_order(suite, builder_idx, total_builders):
