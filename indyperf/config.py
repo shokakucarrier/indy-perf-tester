@@ -57,10 +57,11 @@ class Build:
         self.build_count = spec.get(BUILD_TIMES)
 
 class Suite:
-    def __init__(self, suite_spec, indy_url, da_url, proxy_port, ssl_verify, sso):
+    def __init__(self, suite_spec, indy_url, da_url, proxy_enabled, proxy_port, ssl_verify, sso):
         self.suite_spec = suite_spec
         self.indy_url = indy_url
         self.da_url = da_url
+        self.proxy_enabled = proxy_enabled
         self.proxy_port = proxy_port
         self.ssl_verify = ssl_verify
         self.sso = sso
@@ -156,7 +157,7 @@ def read_config(suite_yml, env_yml, sso_yml):
     if da_url.endswith('/'):
         da_url = da_url[:-1]
 
-    return Suite(suite_spec, indy_url, da_url, proxy_port, ssl_verify, sso)
+    return Suite(suite_spec, indy_url, da_url, oroxy_enabled, proxy_port, ssl_verify, sso)
 
 
 def create_build_order(suite, builder_idx, total_builders):
