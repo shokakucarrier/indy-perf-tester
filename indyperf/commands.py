@@ -62,6 +62,7 @@ def run(suite_yml, builder_idx, total_builders, env_yml, sso_yml, builds_dir):
     sso.get_sso_token(suite)
 
     build_results = []
+    fails = 0
     for build in order.iter():
         print(f"Running build: {build.name}")
 
@@ -80,9 +81,10 @@ def run(suite_yml, builder_idx, total_builders, env_yml, sso_yml, builds_dir):
                 success = builds.do_build(builddir, build, suite)
 
             if success is True:
-                failed_builds.append({'name': build.name, 'results': ['X', '_']})
+                build_results.append({'name': build.name, 'results': ['X', '_']})
             else:
-                failed_builds.append({'name': build.name, 'results': ['_', 'X']})
+                build_results.append({'name': build.name, 'results': ['_', 'X']})
+                fails+=1
 
             promote.seal_folo_report(tid, suite)
 
@@ -108,5 +110,5 @@ def run(suite_yml, builder_idx, total_builders, env_yml, sso_yml, builds_dir):
         results = result['results']
         print(row_format.format(result['name'], *results))
 
-    if len(failed_builds) > 0:
+    if fails > 0:
         sys.exit(1)
