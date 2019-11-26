@@ -98,7 +98,10 @@ def run(suite_yml, builder_idx, total_builders, env_yml, sso_yml, builds_dir):
         except Exception as e:
             print(f"Build: {build.name} had an error: {e}")
         finally:
-            updown.cleanup_build_group(tid, suite)
+            try:
+                updown.cleanup_build_group(tid, suite)
+            except Exception as cleanError:
+                print(f"Build cleanup failed: {cleanError}")
 
         print(f"Pausing {suite.pause} before next build")
         sleep(suite.pause)
