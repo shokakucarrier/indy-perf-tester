@@ -61,10 +61,11 @@ def run(suite_yml, builder_idx, total_builders, env_yml, sso_yml, builds_dir):
     print(f"SSL verification enabled? {suite.ssl_verify}")
     sso.get_sso_token(suite)
 
-    build_results = []
+    build_results = {}
     fails = 0
     for build in order.iter():
         print(f"Running build: {build.name}")
+        result = build_results.get(build.name, [0,0])
 
         tid_base = f"build_perftest-{build.name}"
 
@@ -81,24 +82,29 @@ def run(suite_yml, builder_idx, total_builders, env_yml, sso_yml, builds_dir):
                 success = builds.do_build(builddir, build, suite)
 
             if success is True:
-                if build_results.get(build.name) is not None and build_results[build.name]['results'][1] != 'X':
-                    build_results.append({'name': build.name, 'results': ['X', '_']})
+                promote.seal_folo_report(tid, suite)
+
+                folo_report = promote.pull_folo_report(tid, suite)
+                success = promote.promote_deps_by_path(folo_report, tid, suite)
+
+            if success is True:
+                if suite.promote_by_path is True:
+                    success = promote.promote_output_by_path(tid, suite)
+                else:
+                    success = promote.promote_output_by_group(tid, suite)
+
+            if success is True:
+                result[0]+=1
             else:
-                build_results.append({'name': build.name, 'results': ['_', 'X']})
+                result[1]+=1
                 fails+=1
 
-            promote.seal_folo_report(tid, suite)
-
-            folo_report = promote.pull_folo_report(tid, suite)
-            promote.promote_deps_by_path(folo_report, tid, suite)
-
-            if suite.promote_by_path is True:
-                promote.promote_output_by_path(tid, suite)
-            else:
-                promote.promote_output_by_group(tid, suite)
         except Exception as e:
             print(f"Build: {build.name} had an error: {e}")
+            result[1]+=1
         finally:
+            build_results[build.name] = result
+
             try:
                 updown.cleanup_build_group(tid, suite)
             except Exception as cleanError:
@@ -107,7 +113,7 @@ def run(suite_yml, builder_idx, total_builders, env_yml, sso_yml, builds_dir):
         print(f"Pausing {suite.pause} before next build")
         sleep(suite.pause)
 
-    result_headers = ['Success', 'Fail']
+    result_headers = ['Successes', 'Failures']
     row_format = "{:>15}" * (len(result_headers) + 1)
     print(row_format.format("", *result_headers))
     for result in build_results:
