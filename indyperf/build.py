@@ -5,7 +5,7 @@ from indyperf.utils import run_cmd
 
 DEFAULT_PME_ARGS = [
     "-DrestURL={da_url}",
-    "-DversionIncrementalSuffix=build",
+    "-DversionIncrementalSuffix={pme_version_suffix}",
     "-DallowConfigFilePrecedence=true",
     "-DrepoReportingRemoval=true",
     "-DdependencySource=REST",
@@ -20,7 +20,7 @@ def do_pme(builddir, build, suite):
 
     print(f"Raw PME args: '{build.pme_args}'")
     args = build.pme_args or " ".join(DEFAULT_PME_ARGS)
-    args = args.format(da_url=suite.da_url)
+    args = args.format(da_url=suite.da_url, pme_version_suffix=suite.pme_version_suffix)
 
     ret = run_cmd(f"java -jar /usr/share/pme/pme.jar -f {ctx_dir}/pom.xml -s ./settings.xml {args} 2>&1 | tee ./pme.log", builddir, fail=False)
     print(f"PME return code is {ret}")

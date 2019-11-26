@@ -6,11 +6,11 @@ PASSWORD_GRANT_TYPE = 'password'
 DEFAULT_SSO_GRANT_TYPE = CLIENT_CREDENTIALS_GRANT_TYPE
 
 SSO_ENABLE='enabled'
-SSO_GRANT_TYPE = 'grant_type'
+SSO_GRANT_TYPE = 'grant-type'
 SSO_URL = 'url'
 SSO_REALM = 'realm'
-SSO_CLIENT_ID = 'client_id'
-SSO_CLIENT_SECRET = 'client_secret'
+SSO_CLIENT_ID = 'client-id'
+SSO_CLIENT_SECRET = 'client-secret'
 SSO_USERNAME = 'username'
 SSO_PASSWORD = 'password'
 

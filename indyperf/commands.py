@@ -81,7 +81,8 @@ def run(suite_yml, builder_idx, total_builders, env_yml, sso_yml, builds_dir):
                 success = builds.do_build(builddir, build, suite)
 
             if success is True:
-                build_results.append({'name': build.name, 'results': ['X', '_']})
+                if build_results.get(build.name) is not None and build_results[build.name]['results'][1] != 'X':
+                    build_results.append({'name': build.name, 'results': ['X', '_']})
             else:
                 build_results.append({'name': build.name, 'results': ['_', 'X']})
                 fails+=1

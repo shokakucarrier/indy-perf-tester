@@ -1,11 +1,12 @@
 from ruamel.yaml import YAML
 import os
 
-ENV_INDY_URL = 'indy_url'
-ENV_DA_URL = 'DA_url'
-ENV_PROXY_ENABLED = 'proxy_enabled'
-ENV_PROXY_PORT = 'proxy_port'
-ENV_SSL_VERIFY = 'ssl_verify'
+ENV_INDY_URL = 'indy-url'
+ENV_DA_URL = 'DA-url'
+ENV_PROXY_ENABLED = 'proxy-enabled'
+ENV_PROXY_PORT = 'proxy-port'
+ENV_SSL_VERIFY = 'ssl-verify'
+ENV_PME_VERSION_SUFFIX = 'version-suffix'
 
 TEST_BUILDS_SECTION = 'builds'
 TEST_PROMOTE_BY_PATH_FLAG = 'promote-by-path'
@@ -19,6 +20,7 @@ BUILD_GIT_BRANCH = 'git-branch'
 BUILD_GIT_CONTEXT_DIR = 'git-context-dir'
 BUILD_TIMES = 'times'
 
+DEFAULT_PME_VERSION_SUFFIX='build'
 DEFAULT_PAUSE = 5
 DEFAULT_PROXY_ENABLED = False
 DEFAULT_PROXY_PORT = 8081
@@ -57,10 +59,11 @@ class Build:
         self.build_count = spec.get(BUILD_TIMES)
 
 class Suite:
-    def __init__(self, suite_spec, indy_url, da_url, proxy_enabled, proxy_port, ssl_verify, sso):
+    def __init__(self, suite_spec, indy_url, da_url, pme_version_suffix, proxy_enabled, proxy_port, ssl_verify, sso):
         self.suite_spec = suite_spec
         self.indy_url = indy_url
         self.da_url = da_url
+        self.pme_version_suffix = pme_version_suffix
         self.proxy_enabled = proxy_enabled
         self.proxy_port = proxy_port
         self.ssl_verify = ssl_verify
@@ -136,6 +139,7 @@ def read_config(suite_yml, env_yml, sso_yml):
     da_url = env.get(ENV_DA_URL)
     proxy_enabled = env.get(ENV_PROXY_ENABLED) or DEFAULT_PROXY_ENABLED
     proxy_port = env.get(ENV_PROXY_PORT) or DEFAULT_PROXY_PORT
+    pme_version_suffix = env.get(ENV_PME_VERSION_SUFFIX) or DEFAULT_PME_VERSION_SUFFIX
     ssl_verify = env.get(ENV_SSL_VERIFY)
     if ssl_verify is None:
         ssl_verify = True
@@ -157,7 +161,7 @@ def read_config(suite_yml, env_yml, sso_yml):
     if da_url.endswith('/'):
         da_url = da_url[:-1]
 
-    return Suite(suite_spec, indy_url, da_url, proxy_enabled, proxy_port, ssl_verify, sso)
+    return Suite(suite_spec, indy_url, da_url, pme_version_suffix, proxy_enabled, proxy_port, ssl_verify, sso)
 
 
 def create_build_order(suite, builder_idx, total_builders):
