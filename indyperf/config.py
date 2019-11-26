@@ -6,7 +6,7 @@ ENV_DA_URL = 'DA-url'
 ENV_PROXY_ENABLED = 'proxy-enabled'
 ENV_PROXY_PORT = 'proxy-port'
 ENV_SSL_VERIFY = 'ssl-verify'
-ENV_PME_VERSION_SUFFIX = 'version-suffix'
+ENV_PME_VERSION_SUFFIX = 'pme-version-suffix'
 
 TEST_BUILDS_SECTION = 'builds'
 TEST_PROMOTE_BY_PATH_FLAG = 'promote-by-path'
