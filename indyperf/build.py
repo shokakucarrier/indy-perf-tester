@@ -22,7 +22,12 @@ def do_pme(builddir, build, suite):
     args = build.pme_args or " ".join(DEFAULT_PME_ARGS)
     args = args.format(da_url=suite.da_url)
 
-    run_cmd(f"java -jar /usr/share/pme/pme.jar -f {ctx_dir}/pom.xml -s ./settings.xml {args} 2>&1 | tee ./pme.log", builddir, fail=False) == 0
+    ret = run_cmd(f"java -jar /usr/share/pme/pme.jar -f {ctx_dir}/pom.xml -s ./settings.xml {args} 2>&1 | tee ./pme.log", builddir, fail=False)
+    print(f"PME return code is {ret}")
+    if ret == 0:
+        return True
+    else:
+        return False
 
 
 def do_build(builddir, build, suite):
@@ -32,6 +37,11 @@ def do_build(builddir, build, suite):
     args = build.mvn_args or ''
     args = args.format(indy_url=suite.indy_url)
 
-    run_cmd(f"mvn -f {ctx_dir}/pom.xml -s ./settings.xml {args} clean deploy 2>&1 | tee ./mvn.log", builddir, fail=False) == 0
+    ret = run_cmd(f"mvn -f {ctx_dir}/pom.xml -s ./settings.xml {args} clean deploy 2>&1 | tee ./mvn.log", builddir, fail=False)
+    print(f"Maven return code is {ret}")
+    if ret == 0:
+        return True
+    else:
+        return False
 
 
