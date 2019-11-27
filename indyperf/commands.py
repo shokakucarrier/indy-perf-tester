@@ -116,9 +116,8 @@ def run(suite_yml, builder_idx, total_builders, env_yml, sso_yml, builds_dir):
     result_headers = ['Successes', 'Failures']
     row_format = "{:>15}" * (len(result_headers) + 1)
     print(row_format.format("", *result_headers))
-    for result in build_results:
-        results = result['results']
-        print(row_format.format(result['name'], *results))
+    for name,results in build_results.items():
+        print(row_format.format(name, *results))
 
     if fails > 0:
         sys.exit(1)
