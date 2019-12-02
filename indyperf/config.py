@@ -8,7 +8,9 @@ ENV_PROXY_PORT = 'proxy-port'
 ENV_SSL_VERIFY = 'ssl-verify'
 ENV_PME_VERSION_SUFFIX = 'pme-version-suffix'
 ENV_SSO_SECTION = 'sso'
-ENV_MVN_GOALS = 'deploy'
+ENV_MVN_GOALS = 'mvn-goals'
+ENV_DO_PROMOTE = 'do-promote'
+ENV_MIRROR_TARGET = 'mirror-target'
 
 SSO_ENABLE='enabled'
 SSO_GRANT_TYPE = 'grant-type'
@@ -37,11 +39,13 @@ PASSWORD_GRANT_TYPE = 'password'
 
 DEFAULT_SSO_GRANT_TYPE = CLIENT_CREDENTIALS_GRANT_TYPE
 
+DEFAULT_MIRROR_TARGET = 'maven:group:public'
 DEFAULT_MVN_GOALS = 'deploy'
 DEFAULT_PROMOTION_TARGET = 'maven:group:builds'
 DEFAULT_PME_VERSION_SUFFIX='build'
 DEFAULT_PAUSE = 5
 DEFAULT_PROXY_ENABLED = False
+DEFAULT_DO_PROMOTE = True
 DEFAULT_PROXY_PORT = 8081
 DEFAULT_STORES = [
     {          
@@ -84,6 +88,13 @@ class Environment:
         self.proxy_enabled = env_spec.get(ENV_PROXY_ENABLED) or DEFAULT_PROXY_ENABLED
         self.proxy_port = env_spec.get(ENV_PROXY_PORT) or DEFAULT_PROXY_PORT
         self.pme_version_suffix = env_spec.get(ENV_PME_VERSION_SUFFIX) or DEFAULT_PME_VERSION_SUFFIX
+
+        self.do_promote = env_spec.get(ENV_DO_PROMOTE)
+        if self.do_promote is None:
+            self.do_promote = DEFAULT_DO_PROMOTE
+
+        if self.do_promote is False:
+            self.mirror_target = env_spec.get(ENV_MIRROR_TARGET) or DEFAULT_MIRROR_TARGET
 
         self.ssl_verify = env_spec.get(ENV_SSL_VERIFY)
         if self.ssl_verify is None:
@@ -168,7 +179,7 @@ def read_config(suite_yml, env_yml):
     exception will be raised.
     """
     errors = []
-    
+
     env_spec = {}
     if env_yml is None:
         errors.append(f"Missing test environment config file")
@@ -195,8 +206,8 @@ def read_config(suite_yml, env_yml):
     if env.indy_url is None:
         errors.append(f"Missing Indy URL configuration: {ENV_INDY_URL}")
 
-    if env.da_url is None:
-        errors.append(f"Missing DA URL configuration: {ENV_DA_URL}")
+    # if env.da_url is None:
+    #     errors.append(f"Missing DA URL configuration: {ENV_DA_URL}")
 
     if len(errors) > 0:
         print("\n".join(errors))
@@ -205,7 +216,7 @@ def read_config(suite_yml, env_yml):
     if env.indy_url.endswith('/'):
         env.indy_url = env.indy_url[:-1]
 
-    if env.da_url.endswith('/'):
+    if env.da_url is not None and env.da_url.endswith('/'):
         env.da_url = env.da_url[:-1]
 
     return Suite(suite_spec, env, SingleSignOn(env_spec.get(ENV_SSO_SECTION)))

@@ -2,6 +2,7 @@ import click
 import os
 import sys
 from time import sleep
+from traceback import format_exc
 import indyperf.updown as updown
 import indyperf.build as builds
 import indyperf.promote as promote
@@ -71,22 +72,26 @@ def run(env_yml, suite_yml, builder_idx, total_builders, builds_dir):
 
             print(f"Running test with:\n\nDA URL: {suite.env.da_url}\nIndy URL: {suite.env.indy_url}")
 
-            success = builds.do_pme(builddir, build, suite)
+            success = True
+
+            if suite.env.da_url is not None:
+                success = builds.do_pme(builddir, build, suite)
 
             if success is True:
                 success = builds.do_build(builddir, build, suite)
 
-            if success is True:
-                promote.seal_folo_report(tid, suite)
+            if suite.env.do_promote is True:
+                if success is True:
+                    promote.seal_folo_report(tid, suite)
 
-                folo_report = promote.pull_folo_report(tid, suite)
-                success = promote.promote_deps_by_path(folo_report, tid, suite)
+                    folo_report = promote.pull_folo_report(tid, suite)
+                    success = promote.promote_deps_by_path(folo_report, tid, suite)
 
-            if success is True:
-                if suite.promote_by_path is True:
-                    success = promote.promote_output_by_path(tid, suite)
-                else:
-                    success = promote.promote_output_by_group(tid, suite)
+                if success is True:
+                    if suite.promote_by_path is True:
+                        success = promote.promote_output_by_path(tid, suite)
+                    else:
+                        success = promote.promote_output_by_group(tid, suite)
 
             if success is True:
                 result[0]+=1
@@ -95,15 +100,16 @@ def run(env_yml, suite_yml, builder_idx, total_builders, builds_dir):
                 fails+=1
 
         except Exception as e:
-            print(f"Build: {build.name} had an error: {e}")
+            print(f"Build: {build.name} had an error:\n\n{format_exc()}\n\n")
             result[1]+=1
         finally:
             build_results[build.name] = result
 
-            try:
-                updown.cleanup_build_group(tid, suite)
-            except Exception as cleanError:
-                print(f"Build cleanup failed: {cleanError}")
+            if suite.env.do_promote is True:
+                try:
+                    updown.cleanup_build_group(tid, suite)
+                except Exception as cleanError:
+                    print(f"Build cleanup failed: {cleanError}")
 
         print(f"Pausing {suite.pause} before next build")
         sleep(suite.pause)

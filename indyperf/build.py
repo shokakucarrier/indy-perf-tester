@@ -37,6 +37,7 @@ def do_build(builddir, build, suite):
     args = build.mvn_args or ''
     args = args.format(indy_url=suite.env.indy_url)
 
+    print(f"Run maven with goals: {suite.env.mvn_goals}")
     ret = run_cmd(f"mvn -f {ctx_dir}/pom.xml -s ./settings.xml {args} {suite.env.mvn_goals}", builddir, fail=False)
     print(f"Maven return code is {ret}")
     if ret == 0:

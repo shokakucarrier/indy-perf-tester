@@ -5,6 +5,36 @@ from datetime import datetime as dt
 from urllib.parse import urlparse
 from indyperf.utils import (run_cmd, POST_HEADERS)
 
+PROXY_SETTINGS = """
+  <proxies>
+    <proxy>
+      <id>indy-httprox</id>
+      <active>%(proxy_enabled)s</active>
+      <protocol>http</protocol>
+      <host>%(host)s</host>
+      <port>%(proxy_port)s</port>
+      <username>%(id)s+tracking</username>
+      <password>%(token)s</password>
+      <nonProxyHosts>%(host)s</nonProxyHosts>
+    </proxy>
+  </proxies>
+"""
+
+DEPLOY_SETTINGS = """
+  <profiles>
+    <profile>
+      <id>deploy-settings</id>
+      <properties>
+        <altDeploymentRepository>indy::default::%(url)s/api/folo/track/%(id)s/maven/hosted/%(id)s</altDeploymentRepository>
+      </properties>
+    </profile>
+  </profiles>
+
+  <activeProfiles>
+    <activeProfile>deploy-settings</activeProfile>
+  </activeProfiles>
+"""
+
 SETTINGS = """
 <?xml version="1.0"?>
 <settings>
@@ -15,7 +45,7 @@ SETTINGS = """
     <mirror>
       <id>indy</id>
       <mirrorOf>*</mirrorOf>
-      <url>%(url)s/api/folo/track/%(id)s/maven/group/%(id)s</url>
+      <url>%(mirror_url)s</url>
     </mirror>
   </mirrors>
 
@@ -35,31 +65,9 @@ SETTINGS = """
     </server>
   </servers>
 
-  <proxies>
-    <proxy>
-      <id>indy-httprox</id>
-      <active>%(proxy_enabled)s</active>
-      <protocol>http</protocol>
-      <host>%(host)s</host>
-      <port>%(proxy_port)s</port>
-      <username>%(id)s+tracking</username>
-      <password>%(token)s</password>
-      <nonProxyHosts>%(host)s</nonProxyHosts>
-    </proxy>
-  </proxies>
+  %(proxy_settings)s
 
-  <profiles>
-    <profile>
-      <id>deploy-settings</id>
-      <properties>
-        <altDeploymentRepository>indy::default::%(url)s/api/folo/track/%(id)s/maven/hosted/%(id)s</altDeploymentRepository>
-      </properties>
-    </profile>
-  </profiles>
-
-  <activeProfiles>
-    <activeProfile>deploy-settings</activeProfile>
-  </activeProfiles>
+  %(deploy_settings)s
 </settings>
 """
 
@@ -95,7 +103,11 @@ def create_repos_and_settings(builddir, id, suite):
     to work with them.
     """
 
+    if suite.env.do_promote is True:
+        create_missing_stores(id, suite)
+
     parsed = urlparse(suite.env.indy_url)
+
     params = {
         'url':suite.env.indy_url, 
         'id': id, 
@@ -107,7 +119,26 @@ def create_repos_and_settings(builddir, id, suite):
         'headers': "\n".join([f"<property><name>{name}</name><value>{value}</value></property>" for name,value in suite.headers.items()])
     }
 
-    create_missing_stores(id, suite)
+    mirror_url = "%(url)s/api/folo/track/%(id)s/maven/group/%(id)s" % params
+    if suite.env.do_promote is False:
+        mirror_url = "%(url)s/api/content/%(target)s" % {'url': params['url'], 'target': suite.env.mirror_target.replace(':', '/')}
+
+    print(f"Mirror URL is: {mirror_url}")
+    params['mirror_url'] = mirror_url
+
+
+    proxy_settings = ""
+    if suite.env.proxy_enabled is True:
+        proxy_settings = PROXY_SETTINGS % params
+
+    params['proxy_settings'] = proxy_settings
+
+    deploy_settings = ""
+    if 'deploy' in suite.env.mvn_goals:
+        deploy_settings = DEPLOY_SETTINGS % params
+
+    params['deploy_settings'] = deploy_settings
+
 
     # Write the settings.xml we need for this build
     with open("%s/settings.xml" % builddir, 'w') as f:
