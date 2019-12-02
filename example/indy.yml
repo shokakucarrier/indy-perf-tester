@@ -1,0 +1,25 @@
+promote-by-path: true
+pause-between-builds: 5
+
+builds:
+  weft:
+    git-url: https://github.com/Commonjava/weft.git
+    git-branch: weft-1.12
+    mvn-args: "-DskipTests=true"
+    times: 6
+  partyline:
+    git-url: https://github.com/Commonjava/partyline.git
+    git-branch: partyline-1.16
+    mvn-args: "-DskipTests=true"
+    times: 6
+  galley:
+    git-url: https://github.com/Commonjava/galley.git
+    git-branch: galley-0.17.2
+    mvn-args: "-DskipTests=true"
+    times: 6
+  indy:
+    git-url: https://github.com/Commonjava/indy.git
+    git-branch: release
+    mvn-args: "-DskipTests=true"
+    times: 4
+
