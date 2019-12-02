@@ -9,17 +9,12 @@ import indyperf.config as config
 import indyperf.sso as sso
 
 @click.command()
-@click.argument('suite_yml')
-@click.argument('builder_idx')
-@click.argument('total_builders')
-@click.option('-E', '--env-yml', 
-    type=click.Path(exists=True), default='/target/env.yml', 
-    help='Target environment, including Indy/DA URLs and Indy proxy port')
-@click.option('-S', '--sso-yml', 
-    type=click.Path(exists=True), default='/target/sso.yml', 
-    help='Target environment SSO configuration')
+@click.argument('env_yml') #, help='Target environment, including Indy/DA URLs and Indy proxy port')
+@click.argument('suite_yml') #, help='Test suite configuration')
+@click.argument('builder_idx') #, help='The zero-based index of this builder')
+@click.argument('total_builders') #, help='The total number of builders in this test')
 @click.option('-B', '--builds-dir', help='Base directory where builds should be cloned and run (defaults to $PWD)')
-def run(suite_yml, builder_idx, total_builders, env_yml, sso_yml, builds_dir):
+def run(env_yml, suite_yml, builder_idx, total_builders, builds_dir):
     """ Execute a test run from start to end.
 
         This will read a YAML file containing variables for the target environment, and
@@ -53,12 +48,12 @@ def run(suite_yml, builder_idx, total_builders, env_yml, sso_yml, builds_dir):
 
         NOTE: This process should mimic the calls and sequence executed by PNC as closely as possible!
     """
-    suite = config.read_config(suite_yml, env_yml, sso_yml)
+    suite = config.read_config(suite_yml, env_yml)
     order = config.create_build_order(suite, builder_idx, total_builders)
     if builds_dir is None:
         builds_dir = os.getcwd()
 
-    print(f"SSL verification enabled? {suite.ssl_verify}")
+    print(f"SSL verification enabled? {suite.env.ssl_verify}")
     sso.get_sso_token(suite)
 
     build_results = {}
@@ -74,7 +69,7 @@ def run(suite_yml, builder_idx, total_builders, env_yml, sso_yml, builds_dir):
 
             updown.create_repos_and_settings(builddir, tid, suite);
 
-            print(f"Running test with:\n\nDA URL: {suite.da_url}\nIndy URL: {suite.indy_url}")
+            print(f"Running test with:\n\nDA URL: {suite.env.da_url}\nIndy URL: {suite.env.indy_url}")
 
             success = builds.do_pme(builddir, build, suite)
 

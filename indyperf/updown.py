@@ -85,7 +85,7 @@ def cleanup_build_group(id, suite):
     """
 
     print(f"Deleting temporary group:{id} used for build time only")
-    resp = requests.delete(f"{suite.indy_url}/api/admin/group/{id}", headers=suite.headers, verify=suite.ssl_verify)
+    resp = requests.delete(f"{suite.env.indy_url}/api/admin/group/{id}", headers=suite.headers, verify=suite.env.ssl_verify)
     resp.raise_for_status()
 
 
@@ -95,14 +95,14 @@ def create_repos_and_settings(builddir, id, suite):
     to work with them.
     """
 
-    parsed = urlparse(suite.indy_url)
+    parsed = urlparse(suite.env.indy_url)
     params = {
-        'url':suite.indy_url, 
+        'url':suite.env.indy_url, 
         'id': id, 
         'host': parsed.hostname, 
         'port': parsed.port, 
-        'proxy_enabled': str(suite.proxy_enabled).lower(),
-        'proxy_port': suite.proxy_port,
+        'proxy_enabled': str(suite.env.proxy_enabled).lower(),
+        'proxy_port': suite.env.proxy_port,
         'token': suite.token,
         'headers': "\n".join([f"<property><name>{name}</name><value>{value}</value></property>" for name,value in suite.headers.items()])
     }
@@ -129,7 +129,7 @@ def create_missing_stores(id, suite):
         'name': id, 
         'constituents': [
             f"maven:hosted:{id}", 
-            'maven:group:builds',
+            suite.promotion_target,
             'maven:group:brew_proxies',
             'maven:hosted:shared-imports',
             'maven:group:public'
@@ -151,12 +151,12 @@ def create_missing_stores(id, suite):
         store['doctype'] = store_type
         store['disabled'] = False
 
-        base_url = f"{suite.indy_url}/api/admin/stores/{package_type}/{store_type}"
-        resp = requests.head(f"{base_url}/{store['name']}", headers=suite.headers, verify=suite.ssl_verify)
+        base_url = f"{suite.env.indy_url}/api/admin/stores/{package_type}/{store_type}"
+        resp = requests.head(f"{base_url}/{store['name']}", headers=suite.headers, verify=suite.env.ssl_verify)
         if resp.status_code == 404:
             print("POSTing: %s" % json.dumps(store, indent=2))
 
-            resp = requests.post(base_url, json=store, headers=post_headers, verify=suite.ssl_verify)
+            resp = requests.post(base_url, json=store, headers=post_headers, verify=suite.env.ssl_verify)
             resp.raise_for_status()
 
 

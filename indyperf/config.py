@@ -7,9 +7,21 @@ ENV_PROXY_ENABLED = 'proxy-enabled'
 ENV_PROXY_PORT = 'proxy-port'
 ENV_SSL_VERIFY = 'ssl-verify'
 ENV_PME_VERSION_SUFFIX = 'pme-version-suffix'
+ENV_SSO_SECTION = 'sso'
+ENV_MVN_GOALS = 'deploy'
+
+SSO_ENABLE='enabled'
+SSO_GRANT_TYPE = 'grant-type'
+SSO_URL = 'url'
+SSO_REALM = 'realm'
+SSO_CLIENT_ID = 'client-id'
+SSO_CLIENT_SECRET = 'client-secret'
+SSO_USERNAME = 'username'
+SSO_PASSWORD = 'password'
 
 TEST_BUILDS_SECTION = 'builds'
 TEST_PROMOTE_BY_PATH_FLAG = 'promote-by-path'
+TEST_PROMOTION_TARGET = 'promotion-target'
 TEST_STORES = 'stores'
 TEST_PAUSE = 'pause-between-builds'
 
@@ -20,6 +32,13 @@ BUILD_GIT_BRANCH = 'git-branch'
 BUILD_GIT_CONTEXT_DIR = 'git-context-dir'
 BUILD_TIMES = 'times'
 
+CLIENT_CREDENTIALS_GRANT_TYPE = 'client_credentials'
+PASSWORD_GRANT_TYPE = 'password'
+
+DEFAULT_SSO_GRANT_TYPE = CLIENT_CREDENTIALS_GRANT_TYPE
+
+DEFAULT_MVN_GOALS = 'deploy'
+DEFAULT_PROMOTION_TARGET = 'maven:group:builds'
 DEFAULT_PME_VERSION_SUFFIX='build'
 DEFAULT_PAUSE = 5
 DEFAULT_PROXY_ENABLED = False
@@ -58,22 +77,62 @@ class Build:
         self.git_context_dir = spec.get(BUILD_GIT_CONTEXT_DIR)
         self.build_count = spec.get(BUILD_TIMES)
 
+class Environment:
+    def __init__(self, env_spec):
+        self.indy_url = env_spec.get(ENV_INDY_URL)
+        self.da_url = env_spec.get(ENV_DA_URL)
+        self.proxy_enabled = env_spec.get(ENV_PROXY_ENABLED) or DEFAULT_PROXY_ENABLED
+        self.proxy_port = env_spec.get(ENV_PROXY_PORT) or DEFAULT_PROXY_PORT
+        self.pme_version_suffix = env_spec.get(ENV_PME_VERSION_SUFFIX) or DEFAULT_PME_VERSION_SUFFIX
+
+        self.ssl_verify = env_spec.get(ENV_SSL_VERIFY)
+        if self.ssl_verify is None:
+            self.ssl_verify = True
+
+        self.mvn_goals = env_spec.get(ENV_MVN_GOALS) or DEFAULT_MVN_GOALS
+
+class SingleSignOn:
+    def __init__(self, sso_spec):
+        if sso_spec is None or sso_spec.get(SSO_ENABLE) is False:
+            self.enabled = False
+        else:
+            self.enabled = sso_spec[SSO_ENABLE]
+            self.grant_type = sso_spec.get(SSO_GRANT_TYPE) or DEFAULT_SSO_GRANT_TYPE
+
+            if self.grant_type == DEFAULT_SSO_GRANT_TYPE:
+                self.form = {
+                    'grant_type': self.grant_type, 
+                    'client_id': sso_spec[SSO_CLIENT_ID],
+                    'client_secret': sso_spec[SSO_CLIENT_SECRET]
+                }
+
+            elif self.grant_type == PASSWORD_GRANT_TYPE:
+                self.form = {
+                    'grant_type': self.grant_type, 
+                    'client_id': sso_spec[SSO_CLIENT_ID],
+                    'username': sso_spec[SSO_USERNAME],
+                    'password': sso_spec[SSO_PASSWORD]
+                }
+
+            base_url = sso_spec[SSO_URL]
+            if base_url.endswith('/'):
+                base_url = base_url[:-1]
+
+            self.url = f"{base_url}/auth/realms/{sso_spec[SSO_REALM]}/protocol/openid-connect/token"
+
 class Suite:
-    def __init__(self, suite_spec, indy_url, da_url, pme_version_suffix, proxy_enabled, proxy_port, ssl_verify, sso):
+    def __init__(self, suite_spec, env, sso):
         self.suite_spec = suite_spec
-        self.indy_url = indy_url
-        self.da_url = da_url
-        self.pme_version_suffix = pme_version_suffix
-        self.proxy_enabled = proxy_enabled
-        self.proxy_port = proxy_port
-        self.ssl_verify = ssl_verify
+        self.env = env
         self.sso = sso
+
         self.headers = {}
         self.token = None
 
         self.promote_by_path = suite_spec.get(TEST_PROMOTE_BY_PATH_FLAG) or True
         self.pause = suite_spec.get(TEST_PAUSE) or DEFAULT_PAUSE
         self.stores = suite_spec.get(TEST_STORES) or DEFAULT_STORES.copy()
+        self.promotion_target = suite_spec.get(TEST_PROMOTION_TARGET) or DEFAULT_PROMOTION_TARGET
 
         build_specs = suite_spec.get(TEST_BUILDS_SECTION) or {}
 
@@ -96,7 +155,7 @@ class BuildOrder:
         return iter([self.builds[name] for name in self.ordered_build_names])
 
 
-def read_config(suite_yml, env_yml, sso_yml):
+def read_config(suite_yml, env_yml):
     """ Read the suite configuration that this worker should run, from a config.yml file 
     (specified on the command line and passed in as a parameter here). 
 
@@ -108,24 +167,17 @@ def read_config(suite_yml, env_yml, sso_yml):
     message containing all of the problems will be logged to the console and an
     exception will be raised.
     """
-    sso = None
-    if sso_yml is not None:
-        if not os.path.exists(sso_yml):
-            errors.append( f"Missing SSO config file: {sso_yml}")
-        else:
-            with open(sso_yml) as f:
-                yaml = YAML(typ='safe')
-                sso = yaml.load(f)
-
+    env_spec = {}
     if env_yml is None:
         errors.append(f"Missing test environment config file")
     elif os.path.exists(env_yml):
         with open(env_yml) as f:
             yaml = YAML(typ='safe')
-            env = yaml.load(f)
+            env_spec = yaml.load(f)
     else:
         errors.append( f"Missing test environment config file")
 
+    suite_spec = {}
     if suite_yml is None:
         errors.append(f"Missing test suite file")
     elif os.path.exists(suite_yml):
@@ -135,33 +187,26 @@ def read_config(suite_yml, env_yml, sso_yml):
     else:
         errors.append( f"Missing test suite file")
 
-    indy_url = env.get(ENV_INDY_URL)
-    da_url = env.get(ENV_DA_URL)
-    proxy_enabled = env.get(ENV_PROXY_ENABLED) or DEFAULT_PROXY_ENABLED
-    proxy_port = env.get(ENV_PROXY_PORT) or DEFAULT_PROXY_PORT
-    pme_version_suffix = env.get(ENV_PME_VERSION_SUFFIX) or DEFAULT_PME_VERSION_SUFFIX
-    ssl_verify = env.get(ENV_SSL_VERIFY)
-    if ssl_verify is None:
-        ssl_verify = True
+    env = Environment(env_spec)
 
     errors = []
-    if indy_url is None:
+    if env.indy_url is None:
         errors.append(f"Missing Indy URL configuration: {ENV_INDY_URL}")
 
-    if da_url is None:
+    if env.da_url is None:
         errors.append(f"Missing DA URL configuration: {ENV_DA_URL}")
 
     if len(errors) > 0:
         print("\n".join(errors))
         raise Exception("Invalid configuration")
 
-    if indy_url.endswith('/'):
-        indy_url = indy_url[:-1]
+    if env.indy_url.endswith('/'):
+        env.indy_url = env.indy_url[:-1]
 
-    if da_url.endswith('/'):
-        da_url = da_url[:-1]
+    if env.da_url.endswith('/'):
+        env.da_url = env.da_url[:-1]
 
-    return Suite(suite_spec, indy_url, da_url, pme_version_suffix, proxy_enabled, proxy_port, ssl_verify, sso)
+    return Suite(suite_spec, env, SingleSignOn(env_spec.get(ENV_SSO_SECTION)))
 
 
 def create_build_order(suite, builder_idx, total_builders):

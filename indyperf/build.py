@@ -20,9 +20,9 @@ def do_pme(builddir, build, suite):
 
     print(f"Raw PME args: '{build.pme_args}'")
     args = build.pme_args or " ".join(DEFAULT_PME_ARGS)
-    args = args.format(da_url=suite.da_url, pme_version_suffix=suite.pme_version_suffix)
+    args = args.format(da_url=suite.env.da_url, pme_version_suffix=suite.env.pme_version_suffix)
 
-    ret = run_cmd(f"java -jar /usr/share/pme/pme.jar -f {ctx_dir}/pom.xml -s ./settings.xml {args} 2>&1 | tee ./pme.log", builddir, fail=False)
+    ret = run_cmd(f"java -jar /usr/share/pme/pme.jar -f {ctx_dir}/pom.xml -s ./settings.xml {args}", builddir, fail=False)
     print(f"PME return code is {ret}")
     if ret == 0:
         return True
@@ -35,9 +35,9 @@ def do_build(builddir, build, suite):
 
     print(f"Raw maven args: '{build.mvn_args}'")
     args = build.mvn_args or ''
-    args = args.format(indy_url=suite.indy_url)
+    args = args.format(indy_url=suite.env.indy_url)
 
-    ret = run_cmd(f"mvn -f {ctx_dir}/pom.xml -s ./settings.xml {args} clean deploy 2>&1 | tee ./mvn.log", builddir, fail=False)
+    ret = run_cmd(f"mvn -f {ctx_dir}/pom.xml -s ./settings.xml {args} {suite.env.mvn_goals}", builddir, fail=False)
     print(f"Maven return code is {ret}")
     if ret == 0:
         return True
