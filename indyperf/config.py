@@ -167,6 +167,8 @@ def read_config(suite_yml, env_yml):
     message containing all of the problems will be logged to the console and an
     exception will be raised.
     """
+    errors = []
+    
     env_spec = {}
     if env_yml is None:
         errors.append(f"Missing test environment config file")
