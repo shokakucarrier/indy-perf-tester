@@ -11,6 +11,7 @@ ENV_SSO_SECTION = 'sso'
 ENV_MVN_GOALS = 'mvn-goals'
 ENV_DO_PROMOTE = 'do-promote'
 ENV_MIRROR_TARGET = 'mirror-target'
+ENV_PROMOTION_TARGET = 'promotion-target'
 
 SSO_ENABLE='enabled'
 SSO_GRANT_TYPE = 'grant-type'
@@ -23,7 +24,6 @@ SSO_PASSWORD = 'password'
 
 TEST_BUILDS_SECTION = 'builds'
 TEST_PROMOTE_BY_PATH_FLAG = 'promote-by-path'
-TEST_PROMOTION_TARGET = 'promotion-target'
 TEST_STORES = 'stores'
 TEST_PAUSE = 'pause-between-builds'
 
@@ -89,6 +89,8 @@ class Environment:
         self.proxy_port = env_spec.get(ENV_PROXY_PORT) or DEFAULT_PROXY_PORT
         self.pme_version_suffix = env_spec.get(ENV_PME_VERSION_SUFFIX) or DEFAULT_PME_VERSION_SUFFIX
 
+        self.promotion_target = env_spec.get(ENV_PROMOTION_TARGET) or DEFAULT_PROMOTION_TARGET
+
         self.do_promote = env_spec.get(ENV_DO_PROMOTE)
         if self.do_promote is None:
             self.do_promote = DEFAULT_DO_PROMOTE
@@ -143,7 +145,6 @@ class Suite:
         self.promote_by_path = suite_spec.get(TEST_PROMOTE_BY_PATH_FLAG) or True
         self.pause = suite_spec.get(TEST_PAUSE) or DEFAULT_PAUSE
         self.stores = suite_spec.get(TEST_STORES) or DEFAULT_STORES.copy()
-        self.promotion_target = suite_spec.get(TEST_PROMOTION_TARGET) or DEFAULT_PROMOTION_TARGET
 
         build_specs = suite_spec.get(TEST_BUILDS_SECTION) or {}
 

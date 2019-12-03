@@ -70,10 +70,10 @@ def promote_output_by_path(id, suite):
     """Run by-path promotion of uploaded content"""
 
     key = f"maven:hosted:{id}"
-    target = suite.promotion_target
+    target = suite.env.promotion_target
 
     post_headers = {**POST_HEADERS, **suite.headers}
-    print(f"Promoting build output in hosted:{id} to {suite.promotion_target}")
+    print(f"Promoting build output in hosted:{id} to {suite.env.promotion_target}")
     req = {'source': key, 'target': target}
     resp = requests.post(f"{suite.env.indy_url}/api/promotion/paths/promote", json=req, headers=post_headers, verify=suite.env.ssl_verify)
     resp.raise_for_status()
@@ -84,10 +84,10 @@ def promote_output_by_group(id, suite):
     """Run by-group promotion of uploaded content"""
 
     key = f"maven:hosted:{id}"
-    target = suite.promotion_target
+    target = suite.env.promotion_target
 
     post_headers = {**POST_HEADERS, **suite.headers}
-    print(f"Promoting build output in hosted:{id} to membership of {suite.promotion_target}")
+    print(f"Promoting build output in hosted:{id} to membership of {suite.env.promotion_target}")
     req = {'source': key, 'targetGroup': target}
     resp = requests.post(f"{suite.env.indy_url}/api/promotion/groups/promote", json=req, headers=post_headers, verify=suite.env.ssl_verify)
     resp.raise_for_status()

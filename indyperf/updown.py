@@ -166,7 +166,7 @@ def create_missing_stores(id, suite):
         'name': id, 
         'constituents': [
             f"maven:hosted:{id}", 
-            suite.promotion_target,
+            suite.env.promotion_target,
             'maven:group:brew_proxies',
             'maven:hosted:shared-imports',
             'maven:group:public'
