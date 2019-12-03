@@ -105,11 +105,13 @@ def run(env_yml, suite_yml, builder_idx, total_builders, builds_dir):
         finally:
             build_results[build.name] = result
 
-            if suite.env.do_promote is True:
-                try:
+            try:
+                updown.clean_local_repo(tid)
+                
+                if suite.env.do_promote is True:
                     updown.cleanup_build_group(tid, suite)
-                except Exception as cleanError:
-                    print(f"Build cleanup failed: {cleanError}")
+            except Exception as cleanError:
+                print(f"Build cleanup failed: {cleanError}")
 
         print(f"Pausing {suite.pause} before next build")
         sleep(suite.pause)

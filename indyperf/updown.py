@@ -1,9 +1,12 @@
 import requests
 import os
 import json
+from shutil import rmtree
 from datetime import datetime as dt
 from urllib.parse import urlparse
 from indyperf.utils import (run_cmd, POST_HEADERS)
+
+LOCAL_REPO = "/tmp/local-repo-%(id)s"
 
 PROXY_SETTINGS = """
   <proxies>
@@ -38,7 +41,7 @@ DEPLOY_SETTINGS = """
 SETTINGS = """
 <?xml version="1.0"?>
 <settings>
-  <localRepository>/tmp/repository</localRepository>
+  <localRepository>%(local_repo)s</localRepository>
   <interactiveMode>false</interactiveMode>
 
   <mirrors>
@@ -86,6 +89,8 @@ def setup_builddir(builds_dir, build, tid_base):
 
     return (builddir, tid)
 
+def clean_local_repo(id):
+    rmtree(LOCAL_REPO % {'id': id})
 
 def cleanup_build_group(id, suite):
     """Remove the group created specifically to channel content into this build,
@@ -111,6 +116,7 @@ def create_repos_and_settings(builddir, id, suite):
     params = {
         'url':suite.env.indy_url, 
         'id': id, 
+        'local_repo': LOCAL_REPO % {'id': id},
         'host': parsed.hostname, 
         'port': parsed.port, 
         'proxy_enabled': str(suite.env.proxy_enabled).lower(),
